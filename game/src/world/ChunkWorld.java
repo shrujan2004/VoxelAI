@@ -31,7 +31,9 @@ public class ChunkWorld {
         getChunk(cx, cz).setBlock(lx, lz, b);
     }
 
+    // ✔ Player stands ON solid block
+    // ✔ Movement checks AIR at body level
     public boolean isWalkable(int x, int z) {
-        return !getBlock(x, z).solid;
+        return getBlock(x, z + 1) == BlockType.AIR;
     }
 }

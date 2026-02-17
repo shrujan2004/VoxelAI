@@ -1,4 +1,5 @@
 import javafx.application.Application;
+import javafx.animation.AnimationTimer;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -19,15 +20,16 @@ public class FXGame extends Application {
     private static final int TILE = 32;
     private static final int VIEW = 15;
 
-    // Player coordinates
-    private int px = 0, py = 0, pz = 2;
+    // Player world coordinates
+    private int px = 0;
+    private int pz = 2;
+    private double py = 1.0; // standing ON ground
 
-    // Physics
-    private int velocityY = 0;
+    private double velocityY = 0;
     private boolean onGround = true;
 
-    private static final int GRAVITY = 1;
-    private static final int JUMP_POWER = 14;
+    private static final double GRAVITY = 0.8;
+    private static final double JUMP_POWER = 12;
 
     private final ChunkWorld world = new ChunkWorld();
 
@@ -72,7 +74,13 @@ public class FXGame extends Application {
         stage.setScene(scene);
         stage.show();
 
-        render();
+        new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                updatePhysics();
+                render();
+            }
+        }.start();
     }
 
     private void handleKey(KeyCode key) {
@@ -105,17 +113,18 @@ public class FXGame extends Application {
                 px = nx;
                 pz = nz;
             }
-            render();
         }
     }
 
     private void updatePhysics() {
-        if (!onGround) {
-            py += velocityY;
-            velocityY -= GRAVITY;
 
-            if (py <= 0) {
-                py = 0;
+        if (!onGround) {
+            velocityY -= GRAVITY;
+            py += velocityY * 0.1;
+
+            // Land on ground
+            if (py <= 1.0) {
+                py = 1.0;
                 velocityY = 0;
                 onGround = true;
             }
@@ -134,12 +143,9 @@ public class FXGame extends Application {
         commandBox.clear();
         commandBox.setVisible(false);
         commandMode = false;
-        render();
     }
 
     private void render() {
-        updatePhysics();
-
         g.setFill(Color.BLACK);
         g.fillRect(0, 0, VIEW * TILE, VIEW * TILE);
 
@@ -152,8 +158,7 @@ public class FXGame extends Application {
                     g.drawImage(
                         textures.get(b),
                         (dx + half) * TILE,
-                        (dz + half) * TILE + py / 2,
-                        TILE, TILE
+                        (dz + half) * TILE
                     );
                 }
             }
@@ -161,12 +166,21 @@ public class FXGame extends Application {
 
         // Player
         g.setFill(Color.CYAN);
-        g.fillOval(half * TILE, half * TILE - py, TILE, TILE);
+        g.fillOval(
+            half * TILE,
+            half * TILE - (py - 1) * TILE,
+            TILE,
+            TILE
+        );
 
-        // Coordinates (Minecraft-style)
+        // Coordinates
         g.setFill(Color.WHITE);
         g.setFont(Font.font("Consolas", 18));
-        g.fillText("X: " + px + "  Y: " + py + "  Z: " + pz, 10, 22);
+        g.fillText(
+            "X: " + px + "  Y: " + String.format("%.2f", py) + "  Z: " + pz,
+            10,
+            22
+        );
     }
 
     public static void main(String[] args) {

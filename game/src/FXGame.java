@@ -20,16 +20,17 @@ public class FXGame extends Application {
     private static final int TILE = 32;
     private static final int VIEW = 15;
 
-    // Player world coordinates
+    // Player position
     private int px = 0;
     private int pz = 2;
-    private double py = 1.0; // standing ON ground
 
+    // Visual jump only (NOT world physics)
+    private double py = 1.0;
     private double velocityY = 0;
-    private boolean onGround = true;
+    private boolean jumping = false;
 
-    private static final double GRAVITY = 0.8;
-    private static final double JUMP_POWER = 12;
+    private static final double GRAVITY = 0.7;
+    private static final double JUMP_POWER = 10;
 
     private final ChunkWorld world = new ChunkWorld();
 
@@ -42,6 +43,7 @@ public class FXGame extends Application {
     @Override
     public void start(Stage stage) {
 
+        // Load textures
         for (BlockType b : BlockType.values()) {
             if (b.texture != null) {
                 textures.put(b, new Image("file:../tiles/" + b.texture));
@@ -74,10 +76,11 @@ public class FXGame extends Application {
         stage.setScene(scene);
         stage.show();
 
+        // Stable game loop
         new AnimationTimer() {
             @Override
             public void handle(long now) {
-                updatePhysics();
+                updateJump();
                 render();
             }
         }.start();
@@ -102,9 +105,9 @@ public class FXGame extends Application {
                 case A -> nx--;
                 case D -> nx++;
                 case SPACE -> {
-                    if (onGround) {
+                    if (!jumping) {
                         velocityY = JUMP_POWER;
-                        onGround = false;
+                        jumping = true;
                     }
                 }
             }
@@ -116,17 +119,16 @@ public class FXGame extends Application {
         }
     }
 
-    private void updatePhysics() {
-
-        if (!onGround) {
-            velocityY -= GRAVITY;
+    // Jump = visual arc only (NO falling through world)
+    private void updateJump() {
+        if (jumping) {
             py += velocityY * 0.1;
+            velocityY -= GRAVITY;
 
-            // Land on ground
             if (py <= 1.0) {
                 py = 1.0;
                 velocityY = 0;
-                onGround = true;
+                jumping = false;
             }
         }
     }
@@ -173,7 +175,7 @@ public class FXGame extends Application {
             TILE
         );
 
-        // Coordinates
+        // HUD (Minecraft-style)
         g.setFill(Color.WHITE);
         g.setFont(Font.font("Consolas", 18));
         g.fillText(

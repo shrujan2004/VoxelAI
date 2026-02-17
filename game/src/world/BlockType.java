@@ -1,21 +1,17 @@
 package world;
 
 public enum BlockType {
-    AIR('.', "\u001B[0m"),
-    WOOD('W', "\u001B[33m"),   // Yellow
-    STONE('S', "\u001B[37m"), // White
-    DIRT('D', "\u001B[31m"),  // Brown/Red
-    GLASS('G', "\u001B[34m"); // Blue
+    AIR(null, false),
+    DIRT("dirt.png", true),
+    WOOD("wood.png", true),
+    STONE("stone.png", true),
+    GLASS("glass.png", true);
 
-    private final char symbol;
-    private final String color;
+    public final String texture;
+    public final boolean solid;
 
-    BlockType(char symbol, String color) {
-        this.symbol = symbol;
-        this.color = color;
-    }
-
-    public String render() {
-        return color + symbol + "\u001B[0m";
+    BlockType(String texture, boolean solid) {
+        this.texture = texture;
+        this.solid = solid;
     }
 }

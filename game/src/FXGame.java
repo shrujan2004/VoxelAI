@@ -3,12 +3,16 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import world.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class FXGame extends Application {
 
@@ -22,23 +26,32 @@ public class FXGame extends Application {
     private TextField commandBox;
     private GraphicsContext g;
 
+    private final Map<BlockType, Image> textures = new HashMap<>();
+
     @Override
     public void start(Stage stage) {
+
+        // 🔹 LOAD TEXTURES (CORRECT PATH)
+        for (BlockType b : BlockType.values()) {
+            if (b.texture != null) {
+                textures.put(b, new Image("file:../tiles/" + b.texture));
+            }
+        }
 
         Canvas canvas = new Canvas(VIEW * TILE, VIEW * TILE);
         g = canvas.getGraphicsContext2D();
 
         commandBox = new TextField();
-        commandBox.setPromptText("Type command (example: set 1 0 WOOD)");
+        commandBox.setPromptText("set x z BLOCK");
         commandBox.setVisible(false);
 
         StackPane root = new StackPane(canvas, commandBox);
         Scene scene = new Scene(root);
 
-        // Movement + ESC
+        // MOVEMENT
         scene.setOnKeyPressed(e -> handleKey(e.getCode()));
 
-        // "/" opens command mode (keyboard-layout safe)
+        // "/" OPENS COMMAND MODE
         scene.setOnKeyTyped(e -> {
             if (e.getCharacter().equals("/") && !commandMode) {
                 commandMode = true;
@@ -50,7 +63,7 @@ public class FXGame extends Application {
 
         commandBox.setOnAction(e -> executeCommand());
 
-        stage.setTitle("VoxelAI – Infinite World");
+        stage.setTitle("VoxelAI");
         stage.setScene(scene);
         stage.show();
 
@@ -59,7 +72,6 @@ public class FXGame extends Application {
 
     private void handleKey(KeyCode key) {
 
-        // Close command box
         if (key == KeyCode.ESCAPE && commandMode) {
             commandMode = false;
             commandBox.clear();
@@ -67,37 +79,37 @@ public class FXGame extends Application {
             return;
         }
 
-        // Player movement
+        int nx = px;
+        int nz = pz;
+
         if (!commandMode) {
             switch (key) {
-                case W -> pz--;
-                case S -> pz++;
-                case A -> px--;
-                case D -> px++;
+                case W -> nz--;
+                case S -> nz++;
+                case A -> nx--;
+                case D -> nx++;
+            }
+
+            if (world.isWalkable(nx, nz)) {
+                px = nx;
+                pz = nz;
             }
             render();
         }
     }
 
     private void executeCommand() {
-        String text = commandBox.getText().trim();
+        try {
+            String[] p = commandBox.getText().split(" ");
+            int x = Integer.parseInt(p[1]);
+            int z = Integer.parseInt(p[2]);
+            BlockType b = BlockType.valueOf(p[3].toUpperCase());
+            world.setBlock(x, z, b);
+        } catch (Exception ignored) {}
+
         commandBox.clear();
         commandBox.setVisible(false);
         commandMode = false;
-
-        try {
-            String[] p = text.split(" ");
-
-            // set x z BLOCK
-            if (p[0].equalsIgnoreCase("set")) {
-                int x = Integer.parseInt(p[1]);
-                int z = Integer.parseInt(p[2]);
-                BlockType b = BlockType.valueOf(p[3].toUpperCase());
-                world.setBlock(x, z, b);
-            }
-
-        } catch (Exception ignored) {}
-
         render();
     }
 
@@ -107,38 +119,29 @@ public class FXGame extends Application {
 
         int half = VIEW / 2;
 
-        // Draw world
+        // DRAW WORLD
         for (int dz = -half; dz <= half; dz++) {
             for (int dx = -half; dx <= half; dx++) {
                 BlockType b = world.getBlock(px + dx, pz + dz);
-
-                g.setFill(colorOf(b));
-                g.fillRect(
-                        (dx + half) * TILE,
-                        (dz + half) * TILE,
-                        TILE, TILE
-                );
+                if (b != BlockType.AIR) {
+                    g.drawImage(
+                            textures.get(b),
+                            (dx + half) * TILE,
+                            (dz + half) * TILE,
+                            TILE, TILE
+                    );
+                }
             }
         }
 
-        // Player
+        // PLAYER
         g.setFill(Color.CYAN);
         g.fillOval(half * TILE, half * TILE, TILE, TILE);
 
-        // ===== COORDINATES (TOP-LEFT, MINECRAFT STYLE) =====
+        // COORDINATES
         g.setFill(Color.WHITE);
         g.setFont(Font.font("Consolas", 18));
         g.fillText("X: " + px + "   Z: " + pz, 10, 22);
-    }
-
-    private Color colorOf(BlockType b) {
-        return switch (b) {
-            case DIRT -> Color.SADDLEBROWN;
-            case WOOD -> Color.GOLDENROD;
-            case STONE -> Color.LIGHTGRAY;
-            case GLASS -> Color.LIGHTBLUE;
-            default -> Color.BLACK;
-        };
     }
 
     public static void main(String[] args) {

@@ -11,7 +11,7 @@ public class ChunkWorld {
         return cx + "," + cz;
     }
 
-    public Chunk getChunk(int cx, int cz) {
+    private Chunk getChunk(int cx, int cz) {
         return chunks.computeIfAbsent(key(cx, cz), k -> new Chunk());
     }
 
@@ -20,7 +20,6 @@ public class ChunkWorld {
         int cz = Math.floorDiv(z, Chunk.SIZE);
         int lx = Math.floorMod(x, Chunk.SIZE);
         int lz = Math.floorMod(z, Chunk.SIZE);
-
         return getChunk(cx, cz).getBlock(lx, lz);
     }
 
@@ -29,7 +28,11 @@ public class ChunkWorld {
         int cz = Math.floorDiv(z, Chunk.SIZE);
         int lx = Math.floorMod(x, Chunk.SIZE);
         int lz = Math.floorMod(z, Chunk.SIZE);
-
         getChunk(cx, cz).setBlock(lx, lz, b);
+    }
+
+    public boolean isWalkable(int x, int z) {
+        BlockType b = getBlock(x, z);
+        return !b.solid;
     }
 }

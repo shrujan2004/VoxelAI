@@ -1,17 +1,14 @@
 package world;
 
 public class Chunk {
+
     public static final int SIZE = 16;
     private final BlockType[][] blocks = new BlockType[SIZE][SIZE];
 
     public Chunk() {
-        generate();
-    }
-
-    private void generate() {
         for (int x = 0; x < SIZE; x++) {
             for (int z = 0; z < SIZE; z++) {
-                blocks[x][z] = BlockType.DIRT;
+                blocks[x][z] = BlockType.AIR;
             }
         }
     }

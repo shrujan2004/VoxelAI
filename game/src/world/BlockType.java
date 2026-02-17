@@ -3,9 +3,9 @@ package world;
 public enum BlockType {
     AIR(null, false),
     DIRT("dirt.png", true),
+    GRASS("grass.png", true),
     WOOD("wood.png", true),
-    STONE("stone.png", true),
-    GLASS("glass.png", true);
+    STONE("stone.png", true);
 
     public final String texture;
     public final boolean solid;

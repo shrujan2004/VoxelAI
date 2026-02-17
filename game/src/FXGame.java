@@ -19,7 +19,16 @@ public class FXGame extends Application {
     private static final int TILE = 32;
     private static final int VIEW = 15;
 
-    private int px = 0, pz = 0;
+    // Player coordinates
+    private int px = 0, py = 0, pz = 2;
+
+    // Physics
+    private int velocityY = 0;
+    private boolean onGround = true;
+
+    private static final int GRAVITY = 1;
+    private static final int JUMP_POWER = 14;
+
     private final ChunkWorld world = new ChunkWorld();
 
     private boolean commandMode = false;
@@ -31,7 +40,6 @@ public class FXGame extends Application {
     @Override
     public void start(Stage stage) {
 
-        // 🔹 LOAD TEXTURES (CORRECT PATH)
         for (BlockType b : BlockType.values()) {
             if (b.texture != null) {
                 textures.put(b, new Image("file:../tiles/" + b.texture));
@@ -48,10 +56,7 @@ public class FXGame extends Application {
         StackPane root = new StackPane(canvas, commandBox);
         Scene scene = new Scene(root);
 
-        // MOVEMENT
         scene.setOnKeyPressed(e -> handleKey(e.getCode()));
-
-        // "/" OPENS COMMAND MODE
         scene.setOnKeyTyped(e -> {
             if (e.getCharacter().equals("/") && !commandMode) {
                 commandMode = true;
@@ -88,6 +93,12 @@ public class FXGame extends Application {
                 case S -> nz++;
                 case A -> nx--;
                 case D -> nx++;
+                case SPACE -> {
+                    if (onGround) {
+                        velocityY = JUMP_POWER;
+                        onGround = false;
+                    }
+                }
             }
 
             if (world.isWalkable(nx, nz)) {
@@ -95,6 +106,19 @@ public class FXGame extends Application {
                 pz = nz;
             }
             render();
+        }
+    }
+
+    private void updatePhysics() {
+        if (!onGround) {
+            py += velocityY;
+            velocityY -= GRAVITY;
+
+            if (py <= 0) {
+                py = 0;
+                velocityY = 0;
+                onGround = true;
+            }
         }
     }
 
@@ -114,34 +138,35 @@ public class FXGame extends Application {
     }
 
     private void render() {
+        updatePhysics();
+
         g.setFill(Color.BLACK);
         g.fillRect(0, 0, VIEW * TILE, VIEW * TILE);
 
         int half = VIEW / 2;
 
-        // DRAW WORLD
         for (int dz = -half; dz <= half; dz++) {
             for (int dx = -half; dx <= half; dx++) {
                 BlockType b = world.getBlock(px + dx, pz + dz);
                 if (b != BlockType.AIR) {
                     g.drawImage(
-                            textures.get(b),
-                            (dx + half) * TILE,
-                            (dz + half) * TILE,
-                            TILE, TILE
+                        textures.get(b),
+                        (dx + half) * TILE,
+                        (dz + half) * TILE + py / 2,
+                        TILE, TILE
                     );
                 }
             }
         }
 
-        // PLAYER
+        // Player
         g.setFill(Color.CYAN);
-        g.fillOval(half * TILE, half * TILE, TILE, TILE);
+        g.fillOval(half * TILE, half * TILE - py, TILE, TILE);
 
-        // COORDINATES
+        // Coordinates (Minecraft-style)
         g.setFill(Color.WHITE);
         g.setFont(Font.font("Consolas", 18));
-        g.fillText("X: " + px + "   Z: " + pz, 10, 22);
+        g.fillText("X: " + px + "  Y: " + py + "  Z: " + pz, 10, 22);
     }
 
     public static void main(String[] args) {

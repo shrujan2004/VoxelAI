@@ -32,7 +32,6 @@ public class ChunkWorld {
     }
 
     public boolean isWalkable(int x, int z) {
-        BlockType b = getBlock(x, z);
-        return !b.solid;
+        return !getBlock(x, z).solid;
     }
 }

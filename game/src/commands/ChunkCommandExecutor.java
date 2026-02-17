@@ -18,15 +18,19 @@ public class ChunkCommandExecutor {
     ) {
         int minX = Math.min(x1, x2);
         int maxX = Math.max(x1, x2);
+        int minY = Math.min(y1, y2);
+        int maxY = Math.max(y1, y2);
         int minZ = Math.min(z1, z2);
         int maxZ = Math.max(z1, z2);
 
         for (int x = minX; x <= maxX; x++) {
-            for (int z = minZ; z <= maxZ; z++) {
-                world.setBlock(x, z, type);
+            for (int y = minY; y <= maxY; y++) {
+                for (int z = minZ; z <= maxZ; z++) {
+                    world.setBlock(x, y, z, type);
+                }
             }
         }
 
-        System.out.println("✅ Filled area with " + type);
+        System.out.println("✅ Filled " + ((maxX - minX + 1) * (maxY - minY + 1) * (maxZ - minZ + 1)) + " blocks with " + type);
     }
 }

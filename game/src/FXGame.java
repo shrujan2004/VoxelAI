@@ -21,92 +21,104 @@ import java.util.Map;
 
 public class FXGame extends Application {
 
-    private static final int WIDTH = 1024;
-    private static final int HEIGHT = 640;
-    private static final int RAY_COUNT = 180;
-    private static final double MAX_VIEW_DISTANCE = 22;
-    private static final double FOV = Math.toRadians(75);
+    private static final int WIDTH = 1200;
+    private static final int HEIGHT = 720;
+    private static final int RAY_COUNT = 360;
+    private static final double FOV = Math.toRadians(80);
+    private static final double MAX_DIST = 40;
 
-    private double px = 0;
-    private double pz = 2;
-    private double py = 2;
-
-    private double velocityY = 0;
-    private boolean jumpPressed = false;
-
-    private double yaw = Math.PI / 2;
+    private static final double PLAYER_RADIUS = 0.30;
+    private static final double PLAYER_HEIGHT = 1.8;
+    private static final double EYE_OFFSET = 1.62;
 
     private final ChunkWorld world = new ChunkWorld();
     private final AIClient aiClient = new AIClient();
     private final AICommandHandler aiHandler = new AICommandHandler(new ChunkCommandExecutor(world));
 
-    // Command system
-    private boolean commandMode = false;
+    private final Map<BlockType, Color> palette = new HashMap<>();
+    private final Map<String, Image> skinHeads = new HashMap<>();
+
+    private GraphicsContext g;
     private TextField commandBox;
 
-    private final Map<BlockType, Color> blockColors = new HashMap<>();
-    private final Map<String, Image> skinHeads = new HashMap<>();
-    private String activeSkin = "male";
+    private boolean commandMode;
+
+    private double px = 0;
+    private double py = 10;
+    private double pz = 0;
+
+    private double velY;
+    private boolean jumpQueued;
 
     private boolean moveForward;
     private boolean moveBackward;
     private boolean moveLeft;
     private boolean moveRight;
+    private boolean sprint;
+
+    private double yaw = Math.PI / 2;
+    private double pitch = 0;
+
+    private String activeSkin = "male";
 
     @Override
     public void start(Stage stage) {
         loadPalette();
         loadSkins();
+        py = world.getSurfaceHeight((int) px, (int) pz) + 1.1;
 
         Canvas canvas = new Canvas(WIDTH, HEIGHT);
         g = canvas.getGraphicsContext2D();
 
         commandBox = new TextField();
-        commandBox.setPromptText("/set x z BLOCK  |  /skin male|female|gnome  |  /ai make a house");
         commandBox.setVisible(false);
-        commandBox.setMaxWidth(560);
+        commandBox.setMaxWidth(720);
+        commandBox.setPromptText("/set x y z BLOCK | /skin male|female|gnome | /ai build me a house");
+        commandBox.setOnAction(e -> executeCommand());
 
         StackPane root = new StackPane(canvas, commandBox);
         Scene scene = new Scene(root, WIDTH, HEIGHT);
 
-        scene.setOnMouseMoved(e -> {
-            if (!commandMode) {
-                double centerX = scene.getWidth() / 2;
-                double delta = (e.getSceneX() - centerX) * 0.0025;
-                yaw += delta;
-            }
-        });
-
         scene.setOnKeyPressed(e -> onKey(e.getCode(), true));
         scene.setOnKeyReleased(e -> onKey(e.getCode(), false));
-        commandBox.setOnAction(e -> executeCommand());
 
-        stage.setTitle("VoxelAI - First Person Sandbox");
+        scene.setOnMouseMoved(e -> {
+            if (commandMode) {
+                return;
+            }
+            double cx = scene.getWidth() * 0.5;
+            double cy = scene.getHeight() * 0.5;
+            yaw += (e.getSceneX() - cx) * 0.0022;
+            pitch += (e.getSceneY() - cy) * 0.0018;
+            pitch = Math.max(-0.6, Math.min(0.6, pitch));
+        });
+
+        stage.setTitle("VoxelAI - Minecraft Style FPV");
         stage.setScene(scene);
         stage.show();
 
         scene.setCursor(Cursor.CROSSHAIR);
 
         new AnimationTimer() {
-            long lastTime = 0;
+            long last;
 
             @Override
             public void handle(long now) {
-                if (lastTime == 0) {
-                    lastTime = now;
+                if (last == 0) {
+                    last = now;
                     return;
                 }
-                double dt = (now - lastTime) / 1_000_000_000.0;
+                double dt = (now - last) / 1_000_000_000.0;
                 update(dt);
                 render();
-                lastTime = now;
+                last = now;
             }
         }.start();
     }
 
     private void onKey(KeyCode key, boolean pressed) {
         if (commandMode) {
-            if (key == KeyCode.ESCAPE && pressed) {
+            if (pressed && key == KeyCode.ESCAPE) {
                 closeCommandMode();
             }
             return;
@@ -117,7 +129,8 @@ public class FXGame extends Application {
             case S -> moveBackward = pressed;
             case A -> moveLeft = pressed;
             case D -> moveRight = pressed;
-            case SPACE -> jumpPressed = pressed;
+            case SHIFT -> sprint = pressed;
+            case SPACE -> jumpQueued = pressed;
             case SLASH -> {
                 if (pressed) {
                     commandMode = true;
@@ -130,67 +143,117 @@ public class FXGame extends Application {
     }
 
     private void update(double dt) {
-        double speed = 5.4;
-        double moveX = 0;
-        double moveZ = 0;
+        double moveSpeed = sprint ? 7.3 : 4.6;
+        double dx = 0;
+        double dz = 0;
 
         if (moveForward) {
-            moveX += Math.cos(yaw) * speed * dt;
-            moveZ += Math.sin(yaw) * speed * dt;
+            dx += Math.cos(yaw) * moveSpeed * dt;
+            dz += Math.sin(yaw) * moveSpeed * dt;
         }
         if (moveBackward) {
-            moveX -= Math.cos(yaw) * speed * dt;
-            moveZ -= Math.sin(yaw) * speed * dt;
+            dx -= Math.cos(yaw) * moveSpeed * dt;
+            dz -= Math.sin(yaw) * moveSpeed * dt;
         }
         if (moveLeft) {
-            moveX += Math.cos(yaw - Math.PI / 2) * speed * dt;
-            moveZ += Math.sin(yaw - Math.PI / 2) * speed * dt;
+            dx += Math.cos(yaw - Math.PI / 2) * moveSpeed * dt;
+            dz += Math.sin(yaw - Math.PI / 2) * moveSpeed * dt;
         }
         if (moveRight) {
-            moveX += Math.cos(yaw + Math.PI / 2) * speed * dt;
-            moveZ += Math.sin(yaw + Math.PI / 2) * speed * dt;
+            dx += Math.cos(yaw + Math.PI / 2) * moveSpeed * dt;
+            dz += Math.sin(yaw + Math.PI / 2) * moveSpeed * dt;
         }
 
-        double nx = px + moveX;
-        double nz = pz + moveZ;
-        if (world.isWalkable((int) Math.round(nx), (int) Math.round(nz))) {
+        moveWithCollision(dx, 0);
+        moveWithCollision(0, dz);
+
+        boolean grounded = isGrounded();
+        if (jumpQueued && grounded) {
+            velY = 6.8;
+        }
+
+        velY -= 17 * dt;
+        py += velY * dt;
+
+        if (collides(px, py, pz)) {
+            if (velY < 0) {
+                while (collides(px, py, pz)) {
+                    py += 0.01;
+                }
+            } else {
+                while (collides(px, py, pz)) {
+                    py -= 0.01;
+                }
+            }
+            velY = 0;
+        }
+
+        if (py < -10) {
+            px = 0;
+            pz = 0;
+            py = world.getSurfaceHeight(0, 0) + 1.1;
+            velY = 0;
+        }
+    }
+
+    private void moveWithCollision(double dx, double dz) {
+        double nx = px + dx;
+        double nz = pz + dz;
+        if (!collides(nx, py, nz)) {
             px = nx;
             pz = nz;
         }
+    }
 
-        int ground = world.getSurfaceHeight((int) Math.round(px), (int) Math.round(pz)) + 1;
-        if (jumpPressed && Math.abs(py - ground) < 0.01) {
-            velocityY = 6.5;
+    private boolean isGrounded() {
+        return collides(px, py - 0.05, pz);
+    }
+
+    private boolean collides(double x, double y, double z) {
+        int minX = (int) Math.floor(x - PLAYER_RADIUS);
+        int maxX = (int) Math.floor(x + PLAYER_RADIUS);
+        int minY = (int) Math.floor(y);
+        int maxY = (int) Math.floor(y + PLAYER_HEIGHT);
+        int minZ = (int) Math.floor(z - PLAYER_RADIUS);
+        int maxZ = (int) Math.floor(z + PLAYER_RADIUS);
+
+        for (int bx = minX; bx <= maxX; bx++) {
+            for (int by = minY; by <= maxY; by++) {
+                for (int bz = minZ; bz <= maxZ; bz++) {
+                    if (world.isSolid(bx, by, bz)) {
+                        return true;
+                    }
+                }
+            }
         }
-
-        velocityY -= 15.0 * dt;
-        py += velocityY * dt;
-
-        if (py < ground) {
-            py = ground;
-            velocityY = 0;
-        }
+        return false;
+    }
 
     private void executeCommand() {
         String command = commandBox.getText().trim();
-
         try {
             if (command.startsWith("/set")) {
-                String[] p = command.split("\\s+");
-                int x = Integer.parseInt(p[1]);
-                int z = Integer.parseInt(p[2]);
-                BlockType block = BlockType.valueOf(p[3].toUpperCase());
-                world.setBlock(x, z, block);
+                String[] parts = command.split("\\s+");
+                if (parts.length >= 5) {
+                    int x = Integer.parseInt(parts[1]);
+                    int y = Integer.parseInt(parts[2]);
+                    int z = Integer.parseInt(parts[3]);
+                    BlockType b = BlockType.valueOf(parts[4].toUpperCase());
+                    world.setBlock(x, y, z, b);
+                }
             } else if (command.startsWith("/skin")) {
-                String[] p = command.split("\\s+");
-                if (skinHeads.containsKey(p[1].toLowerCase())) {
-                    activeSkin = p[1].toLowerCase();
+                String[] parts = command.split("\\s+");
+                String name = parts[1].toLowerCase();
+                if (skinHeads.containsKey(name)) {
+                    activeSkin = name;
                 }
             } else if (command.startsWith("/ai")) {
                 String prompt = command.substring(3).trim();
-                String response = aiClient.askAI(prompt);
-                if (response != null) {
-                    aiHandler.handle(response);
+                if (!prompt.isBlank()) {
+                    String json = aiClient.askAI(prompt);
+                    if (json != null) {
+                        aiHandler.handle(json);
+                    }
                 }
             }
         } catch (Exception ex) {
@@ -207,77 +270,77 @@ public class FXGame extends Application {
     }
 
     private void render() {
-        g.setFill(Color.SKYBLUE);
-        g.fillRect(0, 0, WIDTH, HEIGHT / 2.0);
-        g.setFill(Color.web("#6d523b"));
-        g.fillRect(0, HEIGHT / 2.0, WIDTH, HEIGHT / 2.0);
+        double horizon = HEIGHT / 2.0 + pitch * 260;
+
+        g.setFill(Color.web("#87ceeb"));
+        g.fillRect(0, 0, WIDTH, horizon);
+        g.setFill(Color.web("#8b6b4a"));
+        g.fillRect(0, horizon, WIDTH, HEIGHT - horizon);
 
         for (int i = 0; i < RAY_COUNT; i++) {
-            double rayAngle = yaw - (FOV / 2.0) + ((double) i / RAY_COUNT) * FOV;
-            castRay(i, rayAngle);
+            double cameraX = (2.0 * i / RAY_COUNT - 1.0) * Math.tan(FOV / 2.0);
+            double rayDirX = Math.cos(yaw) + (-Math.sin(yaw)) * cameraX;
+            double rayDirZ = Math.sin(yaw) + Math.cos(yaw) * cameraX;
+
+            double dist = 0;
+            BlockType hit = BlockType.AIR;
+            while (dist < MAX_DIST) {
+                dist += 0.05;
+                int sx = (int) Math.floor(px + rayDirX * dist);
+                int sy = (int) Math.floor(py + EYE_OFFSET);
+                int sz = (int) Math.floor(pz + rayDirZ * dist);
+                hit = world.getBlock(sx, sy, sz);
+                if (hit.solid) {
+                    break;
+                }
+            }
+
+            if (!hit.solid) {
+                continue;
+            }
+
+            double corrected = dist * Math.cos(Math.atan(cameraX));
+            double wallHeight = (HEIGHT / Math.max(0.1, corrected)) * 0.9;
+            double screenX = (double) i / RAY_COUNT * WIDTH;
+            double lineW = (double) WIDTH / RAY_COUNT + 1;
+            double top = horizon - wallHeight / 2.0;
+
+            Color base = palette.getOrDefault(hit, Color.GRAY);
+            double shade = Math.max(0.2, 1.0 - corrected / MAX_DIST);
+            g.setFill(base.deriveColor(0, 1, shade, 1));
+            g.fillRect(screenX, top, lineW, wallHeight);
         }
 
         drawHUD();
     }
 
-    private void castRay(int rayIndex, double angle) {
-        double step = 0.18;
-        double distance = 0;
-        int hitHeight = 0;
-        BlockType hitBlock = BlockType.GRASS;
-
-        while (distance < MAX_VIEW_DISTANCE) {
-            distance += step;
-            int sx = (int) Math.floor(px + Math.cos(angle) * distance);
-            int sz = (int) Math.floor(pz + Math.sin(angle) * distance);
-            hitHeight = world.getSurfaceHeight(sx, sz);
-            hitBlock = world.getBlock(sx, sz);
-
-            if (hitHeight + 1 >= py - 0.3) {
-                break;
-            }
-        }
-
-        double corrected = distance * Math.cos(angle - yaw);
-        double wallHeight = (HEIGHT * 1.2) / Math.max(0.1, corrected);
-
-        double x = ((double) rayIndex / RAY_COUNT) * WIDTH;
-        double stripeWidth = (double) WIDTH / RAY_COUNT + 1;
-        double yTop = HEIGHT / 2.0 - wallHeight / 2.0;
-
-        Color base = blockColors.getOrDefault(hitBlock, Color.DARKGRAY);
-        double shade = Math.max(0.25, 1.0 - corrected / MAX_VIEW_DISTANCE);
-        g.setFill(base.deriveColor(0, 1, shade, 1));
-        g.fillRect(x, yTop, stripeWidth, wallHeight);
-    }
-
     private void drawHUD() {
         g.setStroke(Color.WHITE);
-        g.strokeLine(WIDTH / 2.0 - 10, HEIGHT / 2.0, WIDTH / 2.0 + 10, HEIGHT / 2.0);
-        g.strokeLine(WIDTH / 2.0, HEIGHT / 2.0 - 10, WIDTH / 2.0, HEIGHT / 2.0 + 10);
+        g.strokeLine(WIDTH / 2.0 - 8, HEIGHT / 2.0, WIDTH / 2.0 + 8, HEIGHT / 2.0);
+        g.strokeLine(WIDTH / 2.0, HEIGHT / 2.0 - 8, WIDTH / 2.0, HEIGHT / 2.0 + 8);
 
-        g.setFill(Color.color(0, 0, 0, 0.5));
-        g.fillRect(14, 14, 350, 110);
+        g.setFill(Color.color(0, 0, 0, 0.45));
+        g.fillRect(12, 12, 460, 120);
         g.setFill(Color.WHITE);
         g.setFont(Font.font("Consolas", 18));
-        g.fillText(String.format("XYZ: %.1f / %.1f / %.1f", px, py, pz), 24, 44);
-        g.fillText("Skin: " + activeSkin + "  |  / for commands", 24, 70);
-        g.fillText("Mouse: look  WASD: move  SPACE: jump", 24, 96);
+        g.fillText(String.format("XYZ %.2f %.2f %.2f", px, py, pz), 24, 42);
+        g.fillText("WASD move | SPACE jump | SHIFT sprint | / command", 24, 70);
+        g.fillText("Skin: " + activeSkin + " | AI: /ai build me a 7 by 7 house", 24, 98);
 
         Image icon = skinHeads.get(activeSkin);
         if (icon != null) {
-            g.drawImage(icon, WIDTH - 92, 16, 72, 72);
+            g.drawImage(icon, WIDTH - 94, 16, 78, 78);
         }
     }
 
     private void loadPalette() {
-        blockColors.put(BlockType.GRASS, Color.web("#5fbd3f"));
-        blockColors.put(BlockType.DIRT, Color.web("#7f5539"));
-        blockColors.put(BlockType.STONE, Color.web("#8d99ae"));
-        blockColors.put(BlockType.WOOD, Color.web("#9c6644"));
-        blockColors.put(BlockType.GLASS, Color.web("#a8dadc"));
-        blockColors.put(BlockType.SAND, Color.web("#e9c46a"));
-        blockColors.put(BlockType.WATER, Color.web("#2a9d8f"));
+        palette.put(BlockType.GRASS, Color.web("#6ab04c"));
+        palette.put(BlockType.DIRT, Color.web("#8e5b3a"));
+        palette.put(BlockType.STONE, Color.web("#9aa0a6"));
+        palette.put(BlockType.WOOD, Color.web("#ad7f49"));
+        palette.put(BlockType.SAND, Color.web("#e9d27a"));
+        palette.put(BlockType.GLASS, Color.web("#b9e8ff"));
+        palette.put(BlockType.WATER, Color.web("#4aa3df"));
     }
 
     private void loadSkins() {

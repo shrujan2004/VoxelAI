@@ -32,8 +32,6 @@ public class AICommandHandler {
                     BlockType.valueOf(params.getString("block"));
 
             executor.fill(x1, y1, z1, x2, y2, z2, block);
-        } else {
-            System.out.println("⚠️ Unknown AI command: " + command);
         }
     }
 }

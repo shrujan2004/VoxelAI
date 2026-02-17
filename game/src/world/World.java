@@ -41,4 +41,16 @@ public class World {
         return x >= 0 && y >= 0 && z >= 0 &&
                x < sizeX && y < sizeY && z < sizeZ;
     }
+    public int getSizeX() {
+    return sizeX;
+}
+
+public int getSizeY() {
+    return sizeY;
+}
+
+public int getSizeZ() {
+    return sizeZ;
+}
+
 }

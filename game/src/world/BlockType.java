@@ -1,9 +1,19 @@
 package world;
 
 public enum BlockType {
-    AIR,
-    DIRT,
-    WOOD,
-    STONE,
-    GLASS
+    AIR('.'),
+    WOOD('W'),
+    STONE('S'),
+    DIRT('D'),
+    GLASS('G');
+
+    private final char symbol;
+
+    BlockType(char symbol) {
+        this.symbol = symbol;
+    }
+
+    public char getSymbol() {
+        return symbol;
+    }
 }

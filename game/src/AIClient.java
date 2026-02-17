@@ -28,7 +28,7 @@ public class AIClient {
             if (response.statusCode() != 200) {
                 System.out.println("⚠️ AI unavailable (status " + response.statusCode() + ")");
                 System.out.println("⚠️ Reason: " + response.body());
-                return null; // IMPORTANT: do NOT crash
+                return null;
             }
 
             return response.body();

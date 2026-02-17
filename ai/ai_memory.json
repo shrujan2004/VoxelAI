@@ -1,1 +1,18 @@
-﻿[]
+[
+  {
+    "role": "user",
+    "content": "build a wooden platform 5 by 5"
+  },
+  {
+    "role": "assistant",
+    "content": "{\"command\": \"fill\", \"params\": {\"x1\": 0, \"y1\": 1, \"z1\": 0, \"x2\": 1, \"y2\": 1, \"z2\": 1, \"block\": \"WOOD\"}, \"message\": \"I had trouble understanding, so I placed a small wooden block.\"}"
+  },
+  {
+    "role": "user",
+    "content": "hey how is your day going on"
+  },
+  {
+    "role": "assistant",
+    "content": "{\"command\": \"fill\", \"params\": {\"x1\": 0, \"y1\": 1, \"z1\": 0, \"x2\": 0, \"y2\": 1, \"z2\": 0, \"block\": \"DIRT\"}, \"message\": \"I am an AI, I do not have feelings, but I am ready to help you build!\"}"
+  }
+]

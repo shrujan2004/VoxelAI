@@ -11,12 +11,10 @@ public class ChunkWorld {
 
     private final Map<String, Chunk> chunks = new HashMap<>();
 
-    private String key(int cx, int cz) {
-        return cx + "," + cz;
-    }
+    private final BlockType[][][] blocks = new BlockType[SIZE_X][SIZE_Y][SIZE_Z];
 
-    private Chunk getChunk(int cx, int cz) {
-        return chunks.computeIfAbsent(key(cx, cz), k -> new Chunk());
+    public ChunkWorld() {
+        generate();
     }
 
     public BlockType getBlock(int x, int z) {
@@ -36,12 +34,10 @@ public class ChunkWorld {
         return (x + z) % 11 == 0 ? BlockType.SAND : BlockType.GRASS;
     }
 
-    public void setBlock(int x, int z, BlockType b) {
-        int cx = Math.floorDiv(x, Chunk.SIZE);
-        int cz = Math.floorDiv(z, Chunk.SIZE);
-        int lx = Math.floorMod(x, Chunk.SIZE);
-        int lz = Math.floorMod(z, Chunk.SIZE);
-        getChunk(cx, cz).setBlock(lx, lz, b);
+    public BlockType get(int x, int y, int z) {
+        if (x < 0 || z < 0 || y < 0) return BlockType.AIR;
+        if (x >= SIZE_X || z >= SIZE_Z || y >= SIZE_Y) return BlockType.AIR;
+        return blocks[x][y][z];
     }
 
     public boolean isWalkable(int x, int z) {

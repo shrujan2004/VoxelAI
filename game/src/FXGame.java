@@ -7,7 +7,6 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.TextField;
-import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
@@ -41,9 +40,9 @@ public class FXGame extends Application {
     private final AIClient aiClient = new AIClient();
     private final AICommandHandler aiHandler = new AICommandHandler(new ChunkCommandExecutor(world));
 
+    // Command system
     private boolean commandMode = false;
     private TextField commandBox;
-    private GraphicsContext g;
 
     private final Map<BlockType, Color> blockColors = new HashMap<>();
     private final Map<String, Image> skinHeads = new HashMap<>();
@@ -171,7 +170,6 @@ public class FXGame extends Application {
             py = ground;
             velocityY = 0;
         }
-    }
 
     private void executeCommand() {
         String command = commandBox.getText().trim();

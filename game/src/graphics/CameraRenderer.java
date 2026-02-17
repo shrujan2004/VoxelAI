@@ -1,7 +1,7 @@
 package graphics;
 
-import world.World;
 import world.BlockType;
+import world.World;
 
 public class CameraRenderer {
 
@@ -12,12 +12,12 @@ public class CameraRenderer {
             for (int x = px - radius; x <= px + radius; x++) {
 
                 if (x == px && z == pz) {
-                    System.out.print("P ");
+                    System.out.print("\u001B[36mP\u001B[0m ");
                     continue;
                 }
 
                 BlockType block = world.getBlock(x, py, z);
-                System.out.print(block.getSymbol() + " ");
+                System.out.print(block.render() + " ");
             }
             System.out.println();
         }

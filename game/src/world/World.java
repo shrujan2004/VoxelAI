@@ -37,20 +37,12 @@ public class World {
         return BlockType.AIR;
     }
 
+    public boolean isWalkable(int x, int y, int z) {
+        return inBounds(x, y, z) && blocks[x][y][z] == BlockType.AIR;
+    }
+
     private boolean inBounds(int x, int y, int z) {
         return x >= 0 && y >= 0 && z >= 0 &&
                x < sizeX && y < sizeY && z < sizeZ;
     }
-    public int getSizeX() {
-    return sizeX;
-}
-
-public int getSizeY() {
-    return sizeY;
-}
-
-public int getSizeZ() {
-    return sizeZ;
-}
-
 }

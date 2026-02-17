@@ -1,34 +1,52 @@
-# VoxelAI
+<div align="center">
 
-VoxelAI is a lightweight Minecraft-inspired sandbox prototype with:
-- procedurally generated voxel terrain,
-- first-person mouse look + WASD movement,
-- basic jumping physics,
-- character skin selection (male / female / gnome),
-- command box editing (``/set x y z BLOCK`, `/skin`, `/ai`),
-- Gemini-powered in-game build assistant.
+# 🧱⚡ VOXELAI ⚡🧠  
+### *A Futuristic Voxel Engine Powered by Player Commands & AI*
 
-## Run Java client
+![Java](https://img.shields.io/badge/Java-23-orange?style=for-the-badge)
+![JavaFX](https://img.shields.io/badge/JavaFX-Graphics-blue?style=for-the-badge)
+![Python](https://img.shields.io/badge/Python-AI-green?style=for-the-badge)
+![Gemini AI](https://img.shields.io/badge/AI-Gemini-purple?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-Experimental-red?style=for-the-badge)
 
-From `game/src` compile and run with JavaFX available in your environment:
+> **“Not just a game — a programmable world.”**
 
-```bash
-javac -cp .:../lib/json.jar *.java commands/*.java graphics/*.java world/*.java
-java -cp .:../lib/json.jar FXGame
-```
+</div>
 
-## Run AI server
+---
 
-```bash
-cd ai
-pip install fastapi uvicorn python-dotenv google-genai
-export GEMINI_API_KEY=your_key
-# Optional: export GEMINI_MODEL=gemini-2.5-pro
-python ai_server.py
-```
+## 🎮 What is VoxelAI?
 
-Then in game command box use:
+**VoxelAI** is an experimental **Minecraft-inspired voxel engine** fused with  
+🧠 **AI assistance**,  
+⌨️ **command-driven world editing**, and  
+⚙️ **developer-grade control**.
 
+You don’t just *play* the world —  
+you **talk to it, command it, and shape it**.
+
+---
+
+## 🚀 Current Features (Alpha)
+
+### 🕹️ Core Gameplay
+- ✅ WASD movement
+- ✅ Physics-based jumping (no flying / no infinite fall)
+- ✅ Gravity & ground collision
+- ✅ On-screen **X / Y / Z coordinates** (Minecraft-style HUD)
+- ✅ Smooth camera-locked rendering
+
+### 🧱 World System
+- 🌍 Procedural flat world
+- 🟩 Grass / Dirt blocks (rendered)
+- 🧠 Chunk-based structure (future-ready)
+- ⚡ Instant world updates
+
+### 💬 Command Console
+- Press `/` to open console
+- Press `ESC` to close
+- Local commands (offline, safe)
+
+Example:
 ```text
-/ai build me a 5 by 5 wood platform
-```
+/set 12 15 dirt

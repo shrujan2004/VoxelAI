@@ -8,9 +8,7 @@ public class Chunk {
     public Chunk() {
         for (int x = 0; x < SIZE; x++) {
             for (int z = 0; z < SIZE; z++) {
-                if (z == 0) blocks[x][z] = BlockType.GRASS;
-                else if (z == 1) blocks[x][z] = BlockType.DIRT;
-                else blocks[x][z] = BlockType.AIR;
+                blocks[x][z] = BlockType.AIR;
             }
         }
     }

@@ -60,7 +60,7 @@ STRICT RULES:
 - Do NOT include explanations outside JSON
 - You MUST always output a command
 - Allowed command: fill
-- Allowed blocks: WOOD, STONE, DIRT, GLASS
+- Allowed blocks: WOOD, STONE, DIRT, GLASS, SAND
 - Coordinates must be integers
 - Max total blocks per command: 100
 
@@ -102,7 +102,7 @@ async def ask_ai(request: ChatRequest):
 
     try:
         response = client.models.generate_content(
-    model="gemini-2.5-flash-lite",
+    model=os.getenv("GEMINI_MODEL", "gemini-2.5-pro"),
     contents=prompt
 )
 

@@ -7,7 +7,6 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.TextField;
-import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.StackPane;
@@ -106,6 +105,11 @@ public class FXGame extends Application {
             } else {
                 selectedSlot = (selectedSlot - 1 + hotbar.length) % hotbar.length;
             }
+            double cx = scene.getWidth() * 0.5;
+            double cy = scene.getHeight() * 0.5;
+            yaw += (e.getSceneX() - cx) * 0.0022;
+            pitch += (e.getSceneY() - cy) * 0.0018;
+            pitch = Math.max(-0.6, Math.min(0.6, pitch));
         });
 
         scene.setOnMouseMoved(e -> {
@@ -202,6 +206,38 @@ public class FXGame extends Application {
             if (blockIntersectsPlayer(placeX, placeY, placeZ)) {
                 return;
             }
+        }
+    }
+
+    private void update(double dt) {
+        double moveSpeed = sprint ? 7.3 : 4.6;
+        double dx = 0;
+        double dz = 0;
+
+        if (moveForward) {
+            dx += Math.cos(yaw) * moveSpeed * dt;
+            dz += Math.sin(yaw) * moveSpeed * dt;
+        }
+        if (moveBackward) {
+            dx -= Math.cos(yaw) * moveSpeed * dt;
+            dz -= Math.sin(yaw) * moveSpeed * dt;
+        }
+        if (moveLeft) {
+            dx += Math.cos(yaw - Math.PI / 2) * moveSpeed * dt;
+            dz += Math.sin(yaw - Math.PI / 2) * moveSpeed * dt;
+        }
+        if (moveRight) {
+            dx += Math.cos(yaw + Math.PI / 2) * moveSpeed * dt;
+            dz += Math.sin(yaw + Math.PI / 2) * moveSpeed * dt;
+        }
+
+        moveWithCollision(dx, 0);
+        moveWithCollision(0, dz);
+
+        boolean grounded = isGrounded();
+        if (jumpQueued && grounded) {
+            velY = 6.8;
+        }
 
             world.setBlock(placeX, placeY, placeZ, placing);
         }

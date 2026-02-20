@@ -17,7 +17,7 @@ public class FXGame extends Application {
     private static final int HEIGHT = 720;
 
     private final ChunkWorld world = new ChunkWorld();
-    private final Player player = new Player(10, 5, 10);
+    private final Player player = new Player(10, 6, 10);
 
     private boolean w, a, s, d;
     private boolean jumpRequest;
@@ -27,7 +27,6 @@ public class FXGame extends Application {
 
         Canvas canvas = new Canvas(WIDTH, HEIGHT);
         GraphicsContext g = canvas.getGraphicsContext2D();
-
         Scene scene = new Scene(new javafx.scene.layout.StackPane(canvas));
 
         scene.setOnKeyPressed(e -> {
@@ -45,7 +44,7 @@ public class FXGame extends Application {
             if (e.getCode() == KeyCode.D) d = false;
         });
 
-        stage.setTitle("VoxelAI – Stable Physics Test");
+        stage.setTitle("VoxelAI – Stable Physics Core");
         stage.setScene(scene);
         stage.show();
 
@@ -70,17 +69,16 @@ public class FXGame extends Application {
 
         double speed = 5.0 * dt;
 
-        if (w) player.z -= speed;
-        if (s) player.z += speed;
-        if (a) player.x -= speed;
-        if (d) player.x += speed;
+        double dx = 0, dz = 0;
+        if (w) dz -= speed;
+        if (s) dz += speed;
+        if (a) dx -= speed;
+        if (d) dx += speed;
 
-        if (jumpRequest) {
-            PhysicsEngine.jump(player);
-            jumpRequest = false;
-        }
+        player.move(dx, dz, world);
 
-        PhysicsEngine.update(player, world, dt);
+        PhysicsEngine.update(player, world, dt, jumpRequest);
+        jumpRequest = false;
     }
 
     private void render(GraphicsContext g) {
@@ -93,7 +91,7 @@ public class FXGame extends Application {
         g.setFill(Color.GREEN);
         g.fillRect(0, HEIGHT / 2, WIDTH, HEIGHT / 2);
 
-        // Player dot
+        // Player indicator
         g.setFill(Color.CYAN);
         g.fillOval(WIDTH / 2 - 6, HEIGHT / 2 - 6, 12, 12);
 
@@ -101,7 +99,7 @@ public class FXGame extends Application {
         g.setFill(Color.WHITE);
         g.setFont(Font.font("Consolas", 18));
         g.fillText(
-                String.format("X: %.2f  Y: %.2f  Z: %.2f", player.x, player.y, player.z),
+                String.format("X %.2f  Y %.2f  Z %.2f", player.x, player.y, player.z),
                 20, 30
         );
         g.fillText("WASD move | SPACE jump | Stable physics", 20, 55);

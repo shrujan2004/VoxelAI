@@ -2,6 +2,7 @@ package graphics;
 
 import engine.Player;
 import engine.RaycastHit;
+import gameplay.Inventory;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
@@ -28,7 +29,7 @@ public class HudRenderer {
         g.strokeLine(cx, cy - 8, cx, cy + 8);
     }
 
-    public void renderHotbar(GraphicsContext g, BlockType[] hotbar, int selectedSlot, TexturePack textures) {
+    public void renderHotbar(GraphicsContext g, BlockType[] hotbar, int selectedSlot, TexturePack textures, Inventory inventory) {
         double slotW = 52;
         double slotH = 52;
         double totalW = slotW * hotbar.length;
@@ -47,8 +48,9 @@ public class HudRenderer {
             drawHotbarIcon(g, textures, hotbar[i], startX + i * slotW + 12, y + 10);
 
             g.setFill(Color.WHITE);
-            g.setFont(Font.font("Consolas", 12));
-            g.fillText(Integer.toString(i + 1), startX + i * slotW + 5, y + 47);
+            g.setFont(Font.font("Consolas", 11));
+            g.fillText(Integer.toString(i + 1), startX + i * slotW + 4, y + 47);
+            g.fillText("x" + inventory.get(hotbar[i]), startX + i * slotW + 24, y + 47);
         }
     }
 
@@ -91,15 +93,26 @@ public class HudRenderer {
         g.fillOval(cx - 4, cz - 4, 8, 8);
     }
 
-    public void renderStats(GraphicsContext g, Player player, double yaw, boolean sprint, RaycastHit targetHit) {
+    public void renderStats(GraphicsContext g, Player player, double yaw, boolean sprint, RaycastHit targetHit,
+                            BlockType selectedBlock, double breakProgress) {
         g.setFill(Color.WHITE);
-        g.setFont(Font.font("Consolas", 18));
+        g.setFont(Font.font("Consolas", 17));
         g.fillText(String.format("X %.2f  Y %.2f  Z %.2f  Yaw %.0f°", player.x, player.y, player.z, Math.toDegrees(yaw)), 20, 30);
-        g.fillText(String.format("Velocity %.2f  Sprint %s", Math.hypot(player.velocityX, player.velocityZ), sprint ? "ON" : "OFF"), 20, 55);
+        g.fillText(String.format("Velocity %.2f  Sprint %s", Math.hypot(player.velocityX, player.velocityZ), sprint ? "ON" : "OFF"), 20, 52);
+        g.fillText(String.format("Health %.1f/%.0f", player.health, player.maxHealth), 20, 74);
+        g.fillText("Selected: " + selectedBlock.name(), 20, 96);
+
         if (targetHit != null) {
-            g.fillText(String.format("Ray hit: (%d, %d, %d) dist %.2f", targetHit.x, targetHit.y, targetHit.z, targetHit.distance), 20, 80);
+            g.fillText(String.format("Ray hit: (%d, %d, %d) dist %.2f", targetHit.x, targetHit.y, targetHit.z, targetHit.distance), 20, 118);
         } else {
-            g.fillText("Ray hit: none", 20, 80);
+            g.fillText("Ray hit: none", 20, 118);
+        }
+
+        if (breakProgress > 0) {
+            g.setFill(Color.rgb(0, 0, 0, 0.55));
+            g.fillRoundRect(width / 2.0 - 120, height / 2.0 + 28, 240, 16, 8, 8);
+            g.setFill(Color.LIMEGREEN);
+            g.fillRoundRect(width / 2.0 - 120, height / 2.0 + 28, 240 * Math.min(1.0, breakProgress), 16, 8, 8);
         }
     }
 

@@ -1,23 +1,27 @@
 package world;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class ChunkWorld {
 
-    public BlockType getBlock(int x, int y, int z) {
+    private final Map<Long, BlockType> edits = new HashMap<>();
 
+    public BlockType getBlock(int x, int y, int z) {
+        BlockType edited = edits.get(key(x, y, z));
+        if (edited != null) return edited;
+        return generatedBlock(x, y, z);
+    }
+
+    private BlockType generatedBlock(int x, int y, int z) {
         int surface = getSurfaceHeight(x, z);
         if (y > surface) {
-            // small water pockets in low areas
-            if (y <= 3 && surface <= 2) {
-                return BlockType.WATER;
-            }
+            if (y <= 3 && surface <= 2) return BlockType.WATER;
             return BlockType.AIR;
         }
 
-        if (y <= 0) {
-            return BlockType.STONE;
-        }
+        if (y <= 0) return BlockType.STONE;
 
-        // top layer variations to make the world visually richer
         if (y == surface) {
             int biome = hash(x / 6, z / 6) & 7;
             return switch (biome) {
@@ -28,12 +32,17 @@ public class ChunkWorld {
             };
         }
 
-        // near-surface layer
-        if (surface - y <= 2) {
-            return BlockType.DIRT;
-        }
+        if (surface - y <= 2) return BlockType.DIRT;
 
         return BlockType.STONE;
+    }
+
+    public void setBlock(int x, int y, int z, BlockType block) {
+        edits.put(key(x, y, z), block);
+    }
+
+    public void breakBlock(int x, int y, int z) {
+        setBlock(x, y, z, BlockType.AIR);
     }
 
     public boolean isSolid(int x, int y, int z) {
@@ -41,7 +50,6 @@ public class ChunkWorld {
     }
 
     public int getSurfaceHeight(int x, int z) {
-        // gentle deterministic hills (about y=3..7)
         double waveA = Math.sin(x * 0.27) * 1.2;
         double waveB = Math.cos(z * 0.23) * 1.1;
         double waveC = Math.sin((x + z) * 0.11) * 0.9;
@@ -54,5 +62,9 @@ public class ChunkWorld {
         h ^= (h >>> 13);
         h *= 1274126177;
         return h;
+    }
+
+    private long key(int x, int y, int z) {
+        return ((long) x & 0x1FFFFF) << 42 | ((long) y & 0x3FFFFF) << 20 | ((long) z & 0xFFFFF);
     }
 }

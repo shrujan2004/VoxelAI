@@ -9,21 +9,13 @@ public class PhysicsEngine {
     public static final double TERMINAL_VELOCITY = 35.0;
     public static final double AIR_DRAG = 0.985;
 
-    // Minecraft-like feel constants
     public static final double WALK_SPEED = 4.3;
     public static final double SPRINT_SPEED = 5.6;
     public static final double GROUND_ACCEL = 30.0;
     public static final double AIR_ACCEL = 8.0;
     public static final double GROUND_FRICTION = 12.0;
 
-    public static void updateHorizontal(
-            Player p,
-            ChunkWorld world,
-            double dt,
-            double moveX,
-            double moveZ,
-            boolean sprint
-    ) {
+    public static void updateHorizontal(Player p, ChunkWorld world, double dt, double moveX, double moveZ, boolean sprint) {
         double desiredSpeed = sprint ? SPRINT_SPEED : WALK_SPEED;
         double len = Math.sqrt(moveX * moveX + moveZ * moveZ);
 
@@ -48,18 +40,20 @@ public class PhysicsEngine {
     }
 
     public static void update(Player p, ChunkWorld world, double dt, boolean jumpRequest) {
+        boolean wasGrounded = p.onGround;
 
-        // Apply gravity with a terminal velocity cap
         p.velocityY -= GRAVITY * dt;
         if (p.velocityY < -TERMINAL_VELOCITY) {
             p.velocityY = -TERMINAL_VELOCITY;
         }
 
-        // Light air resistance helps keep movement stable over varying frame rates
         p.velocityY *= Math.pow(AIR_DRAG, dt * 60.0);
         p.y += p.velocityY * dt;
 
-        // Collision resolution
+        if (!p.onGround && p.velocityY < 0) {
+            p.fallDistance += -p.velocityY * dt;
+        }
+
         if (collides(p, world)) {
             if (p.velocityY < 0) {
                 while (collides(p, world)) p.y += 0.005;
@@ -72,11 +66,22 @@ public class PhysicsEngine {
             p.onGround = false;
         }
 
-        // Jump (ONE TIME)
+        if (!wasGrounded && p.onGround) {
+            applyFallDamage(p);
+            p.fallDistance = 0;
+        }
+
         if (jumpRequest && p.onGround) {
             p.velocityY = JUMP_POWER;
             p.onGround = false;
         }
+    }
+
+    private static void applyFallDamage(Player p) {
+        double safe = 3.0;
+        if (p.fallDistance <= safe) return;
+        double damage = (p.fallDistance - safe) * 2.0;
+        p.damage(damage);
     }
 
     private static double approach(double value, double target, double delta) {

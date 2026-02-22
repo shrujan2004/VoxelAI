@@ -9,7 +9,12 @@ public class PlayerInputState {
     public boolean sprint;
     public boolean jumpRequested;
 
+    public boolean breakHeld;
+    public boolean placeRequested;
+    public boolean craftRequested;
+
     public double yaw = 0;
+    public double pitch = -0.20;
 
     public void turnLeft() {
         yaw -= Math.toRadians(6);
@@ -17,6 +22,14 @@ public class PlayerInputState {
 
     public void turnRight() {
         yaw += Math.toRadians(6);
+    }
+
+    public void lookUp() {
+        pitch = Math.max(-0.9, pitch - 0.08);
+    }
+
+    public void lookDown() {
+        pitch = Math.min(0.9, pitch + 0.08);
     }
 
     public double moveX() {

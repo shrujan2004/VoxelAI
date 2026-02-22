@@ -19,7 +19,7 @@ public class FirstPersonRenderer {
         this.height = height;
     }
 
-    public RaycastHit render(GraphicsContext g, ChunkWorld world, Player player, double yaw, TexturePack textures) {
+    public RaycastHit render(GraphicsContext g, ChunkWorld world, Player player, double yaw, double pitch, TexturePack textures) {
         g.setFill(Color.SKYBLUE);
         g.fillRect(0, 0, width, height / 2.0);
         g.setFill(Color.web("#4f8f3f"));
@@ -32,7 +32,7 @@ public class FirstPersonRenderer {
 
             double dx = Math.sin(rayYaw);
             double dz = -Math.cos(rayYaw);
-            double dy = -0.22;
+            double dy = pitch;
 
             RaycastHit hit = Raycaster.raycast(world, player.x, player.eyeY(), player.z, dx, dy, dz, 40);
             if (hit == null) continue;
@@ -56,7 +56,17 @@ public class FirstPersonRenderer {
         return Raycaster.raycast(
                 world,
                 player.x, player.eyeY(), player.z,
-                Math.sin(yaw), -0.22, -Math.cos(yaw),
+                Math.sin(yaw), pitch, -Math.cos(yaw),
+                12.0
+        );
+    }
+
+
+    public RaycastHit renderTargetOnly(ChunkWorld world, Player player, double yaw, double pitch) {
+        return Raycaster.raycast(
+                world,
+                player.x, player.eyeY(), player.z,
+                Math.sin(yaw), pitch, -Math.cos(yaw),
                 12.0
         );
     }

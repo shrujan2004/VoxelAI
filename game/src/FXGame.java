@@ -1,6 +1,9 @@
 import engine.PhysicsEngine;
 import engine.Player;
 import engine.RaycastHit;
+import gameplay.CraftingSystem;
+import gameplay.Inventory;
+import gameplay.MiningSystem;
 import graphics.FirstPersonRenderer;
 import graphics.HudRenderer;
 import graphics.TexturePack;
@@ -25,6 +28,9 @@ public class FXGame extends Application {
     private final Player player = new Player(10, 7, 10);
 
     private final PlayerInputState input = new PlayerInputState();
+    private final Inventory inventory = new Inventory();
+    private final CraftingSystem craftingSystem = new CraftingSystem();
+    private final MiningSystem miningSystem = new MiningSystem();
 
     private final BlockType[] hotbar = createDefaultHotbar();
 
@@ -52,7 +58,7 @@ public class FXGame extends Application {
 
         bindInput(scene);
 
-        stage.setTitle("VoxelAI - FPV + Hotbar + Split Architecture");
+        stage.setTitle("VoxelAI - Now a Game (health/crafting/inventory)");
         stage.setScene(scene);
         stage.show();
 
@@ -73,7 +79,6 @@ public class FXGame extends Application {
         }.start();
     }
 
-
     private BlockType[] createDefaultHotbar() {
         return new BlockType[]{
                 BlockType.GRASS, BlockType.DIRT, BlockType.STONE,
@@ -91,15 +96,19 @@ public class FXGame extends Application {
             if (e.getCode() == KeyCode.SHIFT) input.sprint = true;
             if (e.getCode() == KeyCode.LEFT) input.turnLeft();
             if (e.getCode() == KeyCode.RIGHT) input.turnRight();
+            if (e.getCode() == KeyCode.UP) input.lookUp();
+            if (e.getCode() == KeyCode.DOWN) input.lookDown();
             if (e.getCode() == KeyCode.SPACE) input.jumpRequested = true;
+
+            if (e.getCode() == KeyCode.F) input.breakHeld = true;
+            if (e.getCode() == KeyCode.R) input.placeRequested = true;
+            if (e.getCode() == KeyCode.C) input.craftRequested = true;
 
             if (e.getCode().isDigitKey()) {
                 String name = e.getCode().getName();
                 if (name.length() == 1) {
                     int idx = Integer.parseInt(name) - 1;
-                    if (idx >= 0 && idx < hotbar.length) {
-                        selectedSlot = idx;
-                    }
+                    if (idx >= 0 && idx < hotbar.length) selectedSlot = idx;
                 }
             }
         });
@@ -110,6 +119,7 @@ public class FXGame extends Application {
             if (e.getCode() == KeyCode.A) input.left = false;
             if (e.getCode() == KeyCode.D) input.right = false;
             if (e.getCode() == KeyCode.SHIFT) input.sprint = false;
+            if (e.getCode() == KeyCode.F) input.breakHeld = false;
         });
     }
 
@@ -120,16 +130,56 @@ public class FXGame extends Application {
 
         double speed = Math.hypot(player.velocityX, player.velocityZ);
         walkTime += speed * dt * 5.5;
+
+        targetHit = firstPersonRenderer.renderTargetOnly(world, player, input.yaw, input.pitch);
+
+        if (input.breakHeld && targetHit != null) {
+            BlockType hitBlock = world.getBlock(targetHit.x, targetHit.y, targetHit.z);
+            if (miningSystem.tickBreak(hitBlock, targetHit.x, targetHit.y, targetHit.z, dt)) {
+                world.breakBlock(targetHit.x, targetHit.y, targetHit.z);
+                inventory.add(hitBlock, 1);
+            }
+        } else {
+            miningSystem.reset();
+        }
+
+        if (input.placeRequested && targetHit != null) {
+            input.placeRequested = false;
+            placeSelectedBlock();
+        }
+
+        if (input.craftRequested) {
+            input.craftRequested = false;
+            craftingSystem.craftStoneFromDirt(inventory);
+            craftingSystem.craftGlassFromSand(inventory);
+            craftingSystem.craftWoodFromGrass(inventory);
+        }
+    }
+
+    private void placeSelectedBlock() {
+        BlockType selected = hotbar[selectedSlot];
+        if (selected == BlockType.AIR || selected == BlockType.WATER) return;
+        if (!inventory.remove(selected, 1)) return;
+
+        int px = targetHit.x - targetHit.faceX;
+        int py = targetHit.y - targetHit.faceY;
+        int pz = targetHit.z - targetHit.faceZ;
+
+        if (world.getBlock(px, py, pz) == BlockType.AIR) {
+            world.setBlock(px, py, pz, selected);
+        } else {
+            inventory.add(selected, 1);
+        }
     }
 
     private void render(GraphicsContext g) {
-        targetHit = firstPersonRenderer.render(g, world, player, input.yaw, textures);
+        firstPersonRenderer.render(g, world, player, input.yaw, input.pitch, textures);
 
         hudRenderer.renderCrosshair(g);
-        hudRenderer.renderHotbar(g, hotbar, selectedSlot, textures);
+        hudRenderer.renderHotbar(g, hotbar, selectedSlot, textures, inventory);
         hudRenderer.renderPlayerHand(g, maleArm, walkTime);
         hudRenderer.renderTerrainMiniView(g, world, player, 20, HEIGHT - 260, 320, 220);
-        hudRenderer.renderStats(g, player, input.yaw, input.sprint, targetHit);
+        hudRenderer.renderStats(g, player, input.yaw, input.sprint, targetHit, hotbar[selectedSlot], miningSystem.progress());
     }
 
     private Image loadImage(String path) {

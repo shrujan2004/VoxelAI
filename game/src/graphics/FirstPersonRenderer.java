@@ -60,7 +60,7 @@ public class FirstPersonRenderer {
                 world,
                 player.x, player.eyeY() + viewBob, player.z,
                 Math.sin(yaw), pitch, -Math.cos(yaw),
-                12.0
+                5.0
         );
     }
 
@@ -69,7 +69,7 @@ public class FirstPersonRenderer {
                 world,
                 player.x, player.eyeY(), player.z,
                 Math.sin(yaw), pitch, -Math.cos(yaw),
-                12.0
+                5.0
         );
     }
 
@@ -97,7 +97,7 @@ public class FirstPersonRenderer {
             return;
         }
 
-        Image tileImage = textures.tile(block);
+        Image tileImage = textures.tileForFace(block, hit.faceY);
         if (tileImage != null) {
             int tx = sampleTextureX(player, dx, dy, dz, hit.distance, hit.faceX, hit.faceY, hit.faceZ);
             g.drawImage(tileImage, tx, 0, 1, TexturePack.TILE_SIZE, screenX, screenY, 1, screenHeight);

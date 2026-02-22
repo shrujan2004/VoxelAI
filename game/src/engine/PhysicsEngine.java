@@ -16,6 +16,7 @@ public class PhysicsEngine {
     public static final double GROUND_FRICTION = 12.0;
 
     public static final double JUMP_BUFFER_TIME = 0.15;
+    public static final double COYOTE_TIME = 0.10;
 
     public static void updateHorizontal(Player p, ChunkWorld world, double dt, double moveX, double moveZ, boolean sprint) {
         double desiredSpeed = sprint ? SPRINT_SPEED : WALK_SPEED;
@@ -49,6 +50,7 @@ public class PhysicsEngine {
         } else {
             p.jumpBufferTimer = Math.max(0, p.jumpBufferTimer - dt);
         }
+        p.coyoteTimer = Math.max(0, p.coyoteTimer - dt);
 
         p.velocityY -= GRAVITY * dt;
         if (p.velocityY < -TERMINAL_VELOCITY) {
@@ -66,6 +68,7 @@ public class PhysicsEngine {
             if (p.velocityY < 0) {
                 while (collides(p, world)) p.y += 0.005;
                 p.onGround = true;
+                p.coyoteTimer = COYOTE_TIME;
             } else {
                 while (collides(p, world)) p.y -= 0.005;
             }
@@ -79,10 +82,11 @@ public class PhysicsEngine {
             p.fallDistance = 0;
         }
 
-        if (p.jumpBufferTimer > 0 && p.onGround) {
+        if (p.jumpBufferTimer > 0 && (p.onGround || p.coyoteTimer > 0)) {
             p.velocityY = JUMP_POWER;
             p.onGround = false;
             p.jumpBufferTimer = 0;
+            p.coyoteTimer = 0;
         }
     }
 

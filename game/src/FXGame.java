@@ -1,10 +1,3 @@
-import engine.PhysicsEngine;
-import engine.Player;
-import engine.PlayerInputState;
-import engine.RaycastHit;
-import gameplay.CraftingSystem;
-import gameplay.Inventory;
-import gameplay.MiningSystem;
 import graphics.FirstPersonRenderer;
 import graphics.TexturePack;
 import javafx.animation.AnimationTimer;
@@ -12,55 +5,33 @@ import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.image.Image;
-import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
 import ui.HudRenderer;
-import world.BlockType;
-import world.ChunkWorld;
 import world.ChunkWorldIO;
 
-import java.io.File;
-
 public class FXGame extends Application {
+    private final FXGameState state = new FXGameState();
 
-    private static final int WIDTH = 1280;
-    private static final int HEIGHT = 720;
-
-    private final ChunkWorld world = new ChunkWorld();
-    private final Player player = new Player(10, 7, 10);
-    private final PlayerInputState input = new PlayerInputState();
-
-    private final Inventory inventory = new Inventory();
-    private final CraftingSystem craftingSystem = new CraftingSystem();
-    private final MiningSystem miningSystem = new MiningSystem();
-
-    private final BlockType[] hotbar = createDefaultHotbar();
-
-    private int selectedSlot = 0;
-    private double walkTime = 0;
-    private RaycastHit targetHit;
-
-    private Image maleArm;
-    private TexturePack textures;
-
-    private FirstPersonRenderer firstPersonRenderer;
-    private HudRenderer hudRenderer;
+    private FXGameUpdateSystem updateSystem;
+    private FXGameRenderSystem renderSystem;
 
     @Override
     public void start(Stage stage) {
-        Canvas canvas = new Canvas(WIDTH, HEIGHT);
+        Canvas canvas = new Canvas(FXGameState.WIDTH, FXGameState.HEIGHT);
         GraphicsContext g = canvas.getGraphicsContext2D();
         Scene scene = new Scene(new javafx.scene.layout.StackPane(canvas));
 
-        firstPersonRenderer = new FirstPersonRenderer(WIDTH, HEIGHT);
-        hudRenderer = new HudRenderer(WIDTH, HEIGHT);
+        FirstPersonRenderer firstPersonRenderer = new FirstPersonRenderer(FXGameState.WIDTH, FXGameState.HEIGHT);
+        HudRenderer hudRenderer = new HudRenderer(FXGameState.WIDTH, FXGameState.HEIGHT);
+        TexturePack textures = FXGameAssets.loadTexturePack();
 
-        maleArm = loadImage("game/Player male/male_arm.png");
-        textures = new TexturePack("game/tiles/atlas.png");
+        state.maleArm = FXGameAssets.loadMaleArm();
+        ChunkWorldIO.load(state.world);
 
-        ChunkWorldIO.load(world);
-        bindInput(scene);
+        updateSystem = new FXGameUpdateSystem(firstPersonRenderer);
+        renderSystem = new FXGameRenderSystem(firstPersonRenderer, hudRenderer, textures);
+
+        new FXGameInputHandler().bind(scene, state);
 
         stage.setTitle("VoxelAI - Phase 2/3/4 Upgrades");
         stage.setScene(scene);
@@ -79,140 +50,11 @@ public class FXGame extends Application {
                 double dt = (now - last) / 1_000_000_000.0;
                 dt = Math.min(dt, 0.05);
 
-                update(dt);
-                render(g);
+                updateSystem.update(state, dt);
+                renderSystem.render(g, state);
                 last = now;
             }
         }.start();
-    }
-
-    private BlockType[] createDefaultHotbar() {
-        return new BlockType[]{
-                BlockType.GRASS, BlockType.DIRT, BlockType.STONE,
-                BlockType.SAND, BlockType.WOOD, BlockType.GLASS,
-                BlockType.WATER, BlockType.GRASS, BlockType.STONE
-        };
-    }
-
-    private void bindInput(Scene scene) {
-        scene.setOnKeyPressed(e -> {
-            if (e.getCode() == KeyCode.W) input.forward = true;
-            if (e.getCode() == KeyCode.S) input.back = true;
-            if (e.getCode() == KeyCode.A) input.left = true;
-            if (e.getCode() == KeyCode.D) input.right = true;
-            if (e.getCode() == KeyCode.SHIFT) input.sprint = true;
-            if (e.getCode() == KeyCode.LEFT) input.turnLeft();
-            if (e.getCode() == KeyCode.RIGHT) input.turnRight();
-            if (e.getCode() == KeyCode.UP) input.lookUp();
-            if (e.getCode() == KeyCode.DOWN) input.lookDown();
-            if (e.getCode() == KeyCode.SPACE) input.jumpRequested = true;
-
-            if (e.getCode() == KeyCode.F) input.breakHeld = true;
-            if (e.getCode() == KeyCode.R) input.placeRequested = true;
-            if (e.getCode() == KeyCode.C) input.craftRequested = true;
-            if (e.getCode() == KeyCode.F5) ChunkWorldIO.save(world);
-            if (e.getCode() == KeyCode.F9) ChunkWorldIO.load(world);
-
-            if (e.getCode().isDigitKey()) {
-                String name = e.getCode().getName();
-                if (name.length() == 1) {
-                    int idx = Integer.parseInt(name) - 1;
-                    if (idx >= 0 && idx < hotbar.length) {
-                        selectedSlot = idx;
-                    }
-                }
-            }
-        });
-
-        scene.setOnKeyReleased(e -> {
-            if (e.getCode() == KeyCode.W) input.forward = false;
-            if (e.getCode() == KeyCode.S) input.back = false;
-            if (e.getCode() == KeyCode.A) input.left = false;
-            if (e.getCode() == KeyCode.D) input.right = false;
-            if (e.getCode() == KeyCode.SHIFT) input.sprint = false;
-            if (e.getCode() == KeyCode.F) input.breakHeld = false;
-        });
-    }
-
-    private void update(double dt) {
-        input.updateLookSmoothing(dt);
-
-        player.yaw = input.yaw;
-        player.pitch = input.pitch;
-
-        PhysicsEngine.updateHorizontal(player, world, dt, input.moveX(), input.moveZ(), input.sprint);
-        PhysicsEngine.update(player, world, dt, input.jumpRequested);
-        input.jumpRequested = false;
-
-        double speed = Math.hypot(player.velocityX, player.velocityZ);
-        walkTime += speed * dt * 8.0;
-
-        targetHit = firstPersonRenderer.renderTargetOnly(world, player, player.yaw, player.pitch);
-
-        if (input.breakHeld && targetHit != null) {
-            BlockType hitBlock = world.getBlock(targetHit.x, targetHit.y, targetHit.z);
-            if (miningSystem.tickBreak(hitBlock, targetHit.x, targetHit.y, targetHit.z, dt)) {
-                world.breakBlock(targetHit.x, targetHit.y, targetHit.z);
-                inventory.add(hitBlock, 1);
-            }
-        } else {
-            miningSystem.reset();
-        }
-
-        if (input.placeRequested && targetHit != null) {
-            input.placeRequested = false;
-            placeSelectedBlock();
-        }
-
-        if (input.craftRequested) {
-            input.craftRequested = false;
-            craftingSystem.craftStoneFromDirt(inventory);
-            craftingSystem.craftGlassFromSand(inventory);
-            craftingSystem.craftWoodFromGrass(inventory);
-        }
-    }
-
-    private void placeSelectedBlock() {
-        BlockType selected = hotbar[selectedSlot];
-        if (selected == BlockType.AIR || selected == BlockType.WATER) return;
-        if (!inventory.remove(selected, 1)) return;
-
-        int px = targetHit.x - targetHit.faceX;
-        int py = targetHit.y - targetHit.faceY;
-        int pz = targetHit.z - targetHit.faceZ;
-
-        if (world.getBlock(px, py, pz) == BlockType.AIR) {
-            world.setBlock(px, py, pz, selected);
-        } else {
-            inventory.add(selected, 1);
-        }
-    }
-
-    private void render(GraphicsContext g) {
-        double viewBob = player.onGround ? Math.sin(walkTime) * Math.min(0.06, Math.hypot(player.velocityX, player.velocityZ) * 0.01) : 0;
-
-        firstPersonRenderer.render(g, world, player, player.yaw, player.pitch, textures, viewBob);
-
-        hudRenderer.renderCrosshair(g);
-        hudRenderer.renderHotbar(g, hotbar, selectedSlot, textures, inventory);
-        hudRenderer.renderPlayerHand(g, maleArm, walkTime);
-        hudRenderer.renderTerrainMiniView(g, world, player, 20, HEIGHT - 260, 320, 220);
-        hudRenderer.renderStats(g, player, player.yaw, input.sprint, targetHit, hotbar[selectedSlot], miningSystem.progress());
-    }
-
-    private Image loadImage(String path) {
-        return loadImage(path, "../Player male/male_arm.png", "Player male/male_arm.png");
-    }
-
-    private Image loadImage(String... candidates) {
-        for (String candidate : candidates) {
-            if (candidate == null) continue;
-            File file = new File(candidate);
-            if (file.exists()) {
-                return new Image(file.toURI().toString());
-            }
-        }
-        return null;
     }
 
     public static void main(String[] args) {

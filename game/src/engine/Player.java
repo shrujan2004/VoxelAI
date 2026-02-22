@@ -22,6 +22,7 @@ public class Player {
     // Single authoritative health/fall state declarations
     public double maxHealth = 20.0, health = 20.0, fallDistance = 0.0;
     public double jumpBufferTimer = 0.0;
+    public double coyoteTimer = 0.0;
 
     public Player(double x, double y, double z) {
         this.x = x;

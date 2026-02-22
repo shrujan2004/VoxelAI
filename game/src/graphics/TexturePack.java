@@ -12,7 +12,9 @@ public class TexturePack {
     public static final int ATLAS_COLS = 4;
 
     private final Image atlas;
-    private final EnumMap<BlockType, Image> blockTiles = new EnumMap<>(BlockType.class);
+    private final EnumMap<BlockType, Image> topTiles = new EnumMap<>(BlockType.class);
+    private final EnumMap<BlockType, Image> sideTiles = new EnumMap<>(BlockType.class);
+    private final EnumMap<BlockType, Image> bottomTiles = new EnumMap<>(BlockType.class);
 
     public TexturePack(String atlasPath) {
         this.atlas = loadImage(atlasPath,
@@ -20,11 +22,25 @@ public class TexturePack {
                 "tiles/atlas.png");
 
         for (BlockType type : BlockType.values()) {
-            if (type.texture != null) {
-                blockTiles.put(type, loadImage(
-                        "game/tiles/" + type.texture,
-                        "../tiles/" + type.texture,
-                        "tiles/" + type.texture
+            if (type.topTexture != null) {
+                topTiles.put(type, loadImage(
+                        "game/tiles/" + type.topTexture,
+                        "../tiles/" + type.topTexture,
+                        "tiles/" + type.topTexture
+                ));
+            }
+            if (type.sideTexture != null) {
+                sideTiles.put(type, loadImage(
+                        "game/tiles/" + type.sideTexture,
+                        "../tiles/" + type.sideTexture,
+                        "tiles/" + type.sideTexture
+                ));
+            }
+            if (type.bottomTexture != null) {
+                bottomTiles.put(type, loadImage(
+                        "game/tiles/" + type.bottomTexture,
+                        "../tiles/" + type.bottomTexture,
+                        "tiles/" + type.bottomTexture
                 ));
             }
         }
@@ -35,7 +51,17 @@ public class TexturePack {
     }
 
     public Image tile(BlockType type) {
-        return blockTiles.get(type);
+        return sideTiles.get(type);
+    }
+
+    public Image tileForFace(BlockType type, int faceY) {
+        if (faceY > 0) {
+            return topTiles.get(type);
+        }
+        if (faceY < 0) {
+            return bottomTiles.get(type);
+        }
+        return sideTiles.get(type);
     }
 
     public int atlasIndex(BlockType type) {

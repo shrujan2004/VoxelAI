@@ -1,6 +1,11 @@
 package world;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class ChunkWorld {
+
+    private final Map<Long, BlockType> edits = new HashMap<>();
 
     public BlockType getBlock(int x, int y, int z) {
         int surface = getSurfaceHeight(x, z);

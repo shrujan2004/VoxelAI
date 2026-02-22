@@ -26,13 +26,19 @@ public class FXGame extends Application {
 
     private final PlayerInputState input = new PlayerInputState();
 
-    private final BlockType[] hotbar = {
-            BlockType.GRASS, BlockType.DIRT, BlockType.STONE,
-            BlockType.SAND, BlockType.WOOD, BlockType.GLASS,
-            BlockType.WATER, BlockType.GRASS, BlockType.STONE
-    };
+ private final BlockType[] hotbar = {
+    BlockType.DIRT,
+    BlockType.GRASS,
+    BlockType.STONE,
+    BlockType.WOOD,
+    BlockType.SAND,
+    BlockType.GLASS,
+    BlockType.WATER,
+    BlockType.AIR,
+    BlockType.AIR
+};
+{
 
-    private int selectedSlot = 0;
     private double walkTime = 0;
     private RaycastHit targetHit;
 
@@ -43,19 +49,12 @@ public class FXGame extends Application {
     private HudRenderer hudRenderer;
 
     private double yaw = 0;
-    private double walkTime = 0;
-    private RaycastHit targetHit;
 
-    private Image maleArm;
     private Image atlas;
 
     private static final int TILE_SIZE = 16;
     private static final int ATLAS_COLS = 4;
 
-    private final BlockType[] hotbar = {
-            BlockType.GRASS, BlockType.DIRT, BlockType.STONE,
-            BlockType.SAND, BlockType.WOOD, BlockType.GLASS,
-            BlockType.WATER, BlockType.GRASS, BlockType.STONE
     };
     private int selectedSlot = 0;
 

@@ -8,13 +8,8 @@ public class ChunkWorld {
     private final Map<Long, BlockType> edits = new HashMap<>();
 
     public BlockType getBlock(int x, int y, int z) {
-        BlockType edited = edits.get(key(x, y, z));
-        if (edited != null) return edited;
-        return generatedBlock(x, y, z);
-    }
-
-    private BlockType generatedBlock(int x, int y, int z) {
         int surface = getSurfaceHeight(x, z);
+
         if (y > surface) {
             if (y <= 3 && surface <= 2) return BlockType.WATER;
             return BlockType.AIR;
@@ -37,14 +32,6 @@ public class ChunkWorld {
         return BlockType.STONE;
     }
 
-    public void setBlock(int x, int y, int z, BlockType block) {
-        edits.put(key(x, y, z), block);
-    }
-
-    public void breakBlock(int x, int y, int z) {
-        setBlock(x, y, z, BlockType.AIR);
-    }
-
     public boolean isSolid(int x, int y, int z) {
         return getBlock(x, y, z).solid;
     }
@@ -62,9 +49,5 @@ public class ChunkWorld {
         h ^= (h >>> 13);
         h *= 1274126177;
         return h;
-    }
-
-    private long key(int x, int y, int z) {
-        return ((long) x & 0x1FFFFF) << 42 | ((long) y & 0x3FFFFF) << 20 | ((long) z & 0xFFFFF);
     }
 }

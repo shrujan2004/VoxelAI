@@ -1,13 +1,10 @@
 import engine.PhysicsEngine;
 import engine.Player;
-import engine.RaycastHit;
-import gameplay.CraftingSystem;
-import gameplay.Inventory;
-import gameplay.MiningSystem;
-import graphics.FirstPersonRenderer;
-import ui.HudRenderer;
-import graphics.TexturePack;
 import engine.PlayerInputState;
+import engine.RaycastHit;
+import gameplay.Inventory;
+import graphics.FirstPersonRenderer;
+import graphics.TexturePack;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.scene.Scene;
@@ -16,6 +13,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
+import ui.HudRenderer;
 import world.BlockType;
 import world.ChunkWorld;
 
@@ -26,12 +24,9 @@ public class FXGame extends Application {
 
     private final ChunkWorld world = new ChunkWorld();
     private final Player player = new Player(10, 7, 10);
-
     private final PlayerInputState input = new PlayerInputState();
-    private final Inventory inventory = new Inventory();
-    private final CraftingSystem craftingSystem = new CraftingSystem();
-    private final MiningSystem miningSystem = new MiningSystem();
 
+    private final Inventory inventory = new Inventory();
     private final BlockType[] hotbar = createDefaultHotbar();
 
     private int selectedSlot = 0;
@@ -58,7 +53,7 @@ public class FXGame extends Application {
 
         bindInput(scene);
 
-        stage.setTitle("VoxelAI - Now a Game (health/crafting/inventory)");
+        stage.setTitle("VoxelAI - Phase 1 Stabilized");
         stage.setScene(scene);
         stage.show();
 
@@ -71,7 +66,10 @@ public class FXGame extends Application {
                     last = now;
                     return;
                 }
+
                 double dt = (now - last) / 1_000_000_000.0;
+                dt = Math.min(dt, 0.05);
+
                 update(dt);
                 render(g);
                 last = now;
@@ -100,15 +98,13 @@ public class FXGame extends Application {
             if (e.getCode() == KeyCode.DOWN) input.lookDown();
             if (e.getCode() == KeyCode.SPACE) input.jumpRequested = true;
 
-            if (e.getCode() == KeyCode.F) input.breakHeld = true;
-            if (e.getCode() == KeyCode.R) input.placeRequested = true;
-            if (e.getCode() == KeyCode.C) input.craftRequested = true;
-
             if (e.getCode().isDigitKey()) {
                 String name = e.getCode().getName();
                 if (name.length() == 1) {
                     int idx = Integer.parseInt(name) - 1;
-                    if (idx >= 0 && idx < hotbar.length) selectedSlot = idx;
+                    if (idx >= 0 && idx < hotbar.length) {
+                        selectedSlot = idx;
+                    }
                 }
             }
         });
@@ -119,11 +115,13 @@ public class FXGame extends Application {
             if (e.getCode() == KeyCode.A) input.left = false;
             if (e.getCode() == KeyCode.D) input.right = false;
             if (e.getCode() == KeyCode.SHIFT) input.sprint = false;
-            if (e.getCode() == KeyCode.F) input.breakHeld = false;
         });
     }
 
     private void update(double dt) {
+        player.yaw = input.yaw;
+        player.pitch = input.pitch;
+
         PhysicsEngine.updateHorizontal(player, world, dt, input.moveX(), input.moveZ(), input.sprint);
         PhysicsEngine.update(player, world, dt, input.jumpRequested);
         input.jumpRequested = false;
@@ -131,55 +129,17 @@ public class FXGame extends Application {
         double speed = Math.hypot(player.velocityX, player.velocityZ);
         walkTime += speed * dt * 5.5;
 
-        targetHit = firstPersonRenderer.renderTargetOnly(world, player, input.yaw, input.pitch);
-
-        if (input.breakHeld && targetHit != null) {
-            BlockType hitBlock = world.getBlock(targetHit.x, targetHit.y, targetHit.z);
-            if (miningSystem.tickBreak(hitBlock, targetHit.x, targetHit.y, targetHit.z, dt)) {
-                world.breakBlock(targetHit.x, targetHit.y, targetHit.z);
-                inventory.add(hitBlock, 1);
-            }
-        } else {
-            miningSystem.reset();
-        }
-
-        if (input.placeRequested && targetHit != null) {
-            input.placeRequested = false;
-            placeSelectedBlock();
-        }
-
-        if (input.craftRequested) {
-            input.craftRequested = false;
-            craftingSystem.craftStoneFromDirt(inventory);
-            craftingSystem.craftGlassFromSand(inventory);
-            craftingSystem.craftWoodFromGrass(inventory);
-        }
-    }
-
-    private void placeSelectedBlock() {
-        BlockType selected = hotbar[selectedSlot];
-        if (selected == BlockType.AIR || selected == BlockType.WATER) return;
-        if (!inventory.remove(selected, 1)) return;
-
-        int px = targetHit.x - targetHit.faceX;
-        int py = targetHit.y - targetHit.faceY;
-        int pz = targetHit.z - targetHit.faceZ;
-
-        if (world.getBlock(px, py, pz) == BlockType.AIR) {
-            world.setBlock(px, py, pz, selected);
-        } else {
-            inventory.add(selected, 1);
-        }
+        targetHit = firstPersonRenderer.renderTargetOnly(world, player, player.yaw, player.pitch);
     }
 
     private void render(GraphicsContext g) {
-        firstPersonRenderer.render(g, world, player, input.yaw, input.pitch, textures);
+        firstPersonRenderer.render(g, world, player, player.yaw, player.pitch, textures);
 
         hudRenderer.renderCrosshair(g);
         hudRenderer.renderHotbar(g, hotbar, selectedSlot, textures, inventory);
         hudRenderer.renderPlayerHand(g, maleArm, walkTime);
         hudRenderer.renderTerrainMiniView(g, world, player, 20, HEIGHT - 260, 320, 220);
-        hudRenderer.renderStats(g, player, input.yaw, input.sprint, targetHit, hotbar[selectedSlot], miningSystem.progress());
+        hudRenderer.renderStats(g, player, player.yaw, input.sprint, targetHit, hotbar[selectedSlot], 0);
     }
 
     private Image loadImage(String path) {

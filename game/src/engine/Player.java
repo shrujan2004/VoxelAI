@@ -9,7 +9,11 @@ public class Player {
     public double velocityY = 0;
     public double velocityX = 0;
     public double velocityZ = 0;
+
     public boolean onGround = false;
+
+    public double yaw = 0;
+    public double pitch = -0.20;
 
     public static final double RADIUS = 0.3;
     public static final double HEIGHT = 1.8;
@@ -42,7 +46,6 @@ public class Player {
     }
 
     private boolean collides(ChunkWorld world, double px, double py, double pz) {
-
         int minX = (int) Math.floor(px - RADIUS);
         int maxX = (int) Math.floor(px + RADIUS);
         int minY = (int) Math.floor(py);

@@ -91,7 +91,6 @@ public class PhysicsEngine {
     }
 
     private static boolean collides(Player p, ChunkWorld world) {
-
         int minX = (int) Math.floor(p.x - Player.RADIUS);
         int maxX = (int) Math.floor(p.x + Player.RADIUS);
         int minY = (int) Math.floor(p.y);

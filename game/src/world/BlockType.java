@@ -11,6 +11,7 @@ public enum BlockType {
     GLASS("glass.png", true, 0.4),
     WATER("water.png", false, 0.0);
 
+    // Texture filename relative to game/tiles/
     public final String texture;
     public final boolean solid;
     public final double hardness;

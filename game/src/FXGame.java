@@ -12,6 +12,7 @@ import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
+import world.BlockType;
 import world.ChunkWorld;
 
 public class FXGame extends Application {
@@ -130,6 +131,9 @@ public class FXGame extends Application {
         g.setFill(Color.GREEN);
         g.fillRect(0, HEIGHT / 2, WIDTH, HEIGHT / 2);
 
+        // Terrain mini-view so hills and movement are visible
+        renderTerrainMiniView(g, 20, HEIGHT - 260, 320, 220);
+
         // Player indicator / skin preview
         if (maleHead != null && maleBody != null) {
             double cx = WIDTH / 2.0;
@@ -164,7 +168,55 @@ public class FXGame extends Application {
         } else {
             g.fillText("Ray hit: none", 20, 55);
         }
-        g.fillText("WASD move | LEFT/RIGHT turn | SPACE jump", 20, 80);
+        BlockType underFoot = world.getBlock((int) Math.floor(player.x), (int) Math.floor(player.y - 0.1), (int) Math.floor(player.z));
+        g.fillText("Standing on: " + underFoot.name(), 20, 80);
+        g.fillText("WASD move | LEFT/RIGHT turn | SPACE jump", 20, 105);
+    }
+
+
+    private void renderTerrainMiniView(GraphicsContext g, double startX, double startY, double width, double height) {
+        int range = 12;
+        double cellW = width / (range * 2 + 1);
+        double cellH = height / (range * 2 + 1);
+
+        g.setFill(Color.rgb(0, 0, 0, 0.45));
+        g.fillRoundRect(startX - 8, startY - 8, width + 16, height + 16, 12, 12);
+
+        int px = (int) Math.floor(player.x);
+        int pz = (int) Math.floor(player.z);
+
+        for (int dz = -range; dz <= range; dz++) {
+            for (int dx = -range; dx <= range; dx++) {
+                int wx = px + dx;
+                int wz = pz + dz;
+                int topY = world.getSurfaceHeight(wx, wz);
+                BlockType top = world.getBlock(wx, topY, wz);
+
+                g.setFill(colorForBlock(top, topY));
+                g.fillRect(startX + (dx + range) * cellW, startY + (dz + range) * cellH, cellW + 1, cellH + 1);
+            }
+        }
+
+        double cx = startX + range * cellW;
+        double cz = startY + range * cellH;
+        g.setFill(Color.RED);
+        g.fillOval(cx - 4, cz - 4, 8, 8);
+    }
+
+    private Color colorForBlock(BlockType block, int height) {
+        Color base = switch (block) {
+            case GRASS -> Color.web("#55aa33");
+            case DIRT -> Color.web("#8b5a2b");
+            case STONE -> Color.web("#888888");
+            case SAND -> Color.web("#d8cf83");
+            case WOOD -> Color.web("#a06a3a");
+            case GLASS -> Color.web("#99d8ff");
+            case WATER -> Color.web("#3b66c5");
+            default -> Color.web("#333333");
+        };
+
+        double shade = Math.max(0.65, Math.min(1.15, 0.75 + height * 0.06));
+        return base.deriveColor(0, 1, shade, 1);
     }
 
 

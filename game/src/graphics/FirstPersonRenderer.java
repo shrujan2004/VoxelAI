@@ -19,24 +19,36 @@ public class FirstPersonRenderer {
         this.height = height;
     }
 
-    public RaycastHit render(GraphicsContext g, ChunkWorld world, Player player, double yaw, double pitch, TexturePack textures, double viewBob) {
+    public RaycastHit render(GraphicsContext g, ChunkWorld world, Player player, double yaw, double pitch,
+                             TexturePack textures, double viewBob, boolean sprint, double alpha) {
         g.setImageSmoothing(false);
         renderSkyGradient(g);
+
+        double px = player.interpolatedX(alpha);
+        double py = player.eyeY(alpha) + viewBob;
+        double pz = player.interpolatedZ(alpha);
 
         double horizon = height / 2.0 + viewBob * 28.0;
         g.setFill(Color.web("#4f8f3f"));
         g.fillRect(0, horizon, width, height - horizon);
 
-        double fov = Math.toRadians(75);
+        double baseFov = Math.toRadians(75);
+        double sprintBoost = sprint ? Math.toRadians(6) : 0.0;
+        double fov = baseFov + sprintBoost;
+
         for (int x = 0; x < width; x++) {
             double cameraX = (2.0 * x / width) - 1.0;
             double rayYaw = yaw + cameraX * (fov / 2.0);
+
+            if (Math.abs(rayYaw - yaw) > fov * 0.5) {
+                continue;
+            }
 
             double dx = Math.sin(rayYaw);
             double dz = -Math.cos(rayYaw);
             double dy = pitch;
 
-            RaycastHit hit = Raycaster.raycast(world, player.x, player.eyeY() + viewBob, player.z, dx, dy, dz, 40);
+            RaycastHit hit = Raycaster.raycast(world, px, py, pz, dx, dy, dz, 40);
             if (hit == null) continue;
 
             BlockType block = world.getBlock(hit.x, hit.y, hit.z);
@@ -46,7 +58,7 @@ public class FirstPersonRenderer {
             double columnHeight = Math.min(height, height / Math.max(0.08, corrected * 0.5));
             double y0 = horizon - columnHeight / 2.0;
 
-            drawColumn(g, textures, block, world, player, hit, dx, dy, dz, x, y0, columnHeight);
+            drawColumn(g, textures, block, world, px, py, pz, hit, dx, dy, dz, x, y0, columnHeight);
 
             double faceShade = BlockVisuals.shadeForFace(hit.faceX, hit.faceY, hit.faceZ);
             if (faceShade < 1.0) {
@@ -59,7 +71,7 @@ public class FirstPersonRenderer {
 
         return Raycaster.raycast(
                 world,
-                player.x, player.eyeY() + viewBob, player.z,
+                px, py, pz,
                 Math.sin(yaw), pitch, -Math.cos(yaw),
                 5.0
         );
@@ -79,7 +91,9 @@ public class FirstPersonRenderer {
             TexturePack textures,
             BlockType block,
             ChunkWorld world,
-            Player player,
+            double px,
+            double py,
+            double pz,
             RaycastHit hit,
             double dx,
             double dy,
@@ -92,7 +106,7 @@ public class FirstPersonRenderer {
         if (atlas != null) {
             TexturePack.AtlasUV uv = textures.atlasUvForFace(block, hit.faceY);
             if (uv != null) {
-                int tx = sampleTextureX(player, dx, dy, dz, hit.distance, hit.faceX, hit.faceY, hit.faceZ);
+                int tx = sampleTextureX(px, py, pz, dx, dy, dz, hit.distance, hit.faceX, hit.faceY, hit.faceZ);
                 g.drawImage(atlas, uv.sx() + tx, uv.sy(), 1, TexturePack.TILE_SIZE, screenX, screenY, 1, screenHeight);
                 return;
             }
@@ -100,7 +114,7 @@ public class FirstPersonRenderer {
 
         Image tileImage = textures.tileForFace(block, hit.faceY);
         if (tileImage != null) {
-            int tx = sampleTextureX(player, dx, dy, dz, hit.distance, hit.faceX, hit.faceY, hit.faceZ);
+            int tx = sampleTextureX(px, py, pz, dx, dy, dz, hit.distance, hit.faceX, hit.faceY, hit.faceZ);
             g.drawImage(tileImage, tx, 0, 1, TexturePack.TILE_SIZE, screenX, screenY, 1, screenHeight);
             return;
         }
@@ -139,10 +153,11 @@ public class FirstPersonRenderer {
         g.fillRect(x, y0, 1, h);
     }
 
-    private int sampleTextureX(Player player, double dx, double dy, double dz, double dist, int faceX, int faceY, int faceZ) {
-        double hx = player.x + dx * dist;
-        double hy = player.eyeY() + dy * dist;
-        double hz = player.z + dz * dist;
+    private int sampleTextureX(double px, double py, double pz, double dx, double dy, double dz, double dist,
+                               int faceX, int faceY, int faceZ) {
+        double hx = px + dx * dist;
+        double hy = py + dy * dist;
+        double hz = pz + dz * dist;
 
         double frac;
         if (Math.abs(faceX) == 1) {

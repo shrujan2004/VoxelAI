@@ -4,16 +4,20 @@ import world.ChunkWorld;
 
 public class PhysicsEngine {
 
-    public static final double GRAVITY = 22.0;
+    // Classic voxel-style per-tick numbers (20 ticks/sec) adapted to dt.
+    private static final double TICKS_PER_SECOND = 20.0;
+    public static final double GRAVITY_PER_TICK = 0.08;
+    public static final double TERMINAL_VELOCITY_PER_TICK = 3.92;
     public static final double JUMP_POWER = 8.5;
-    public static final double TERMINAL_VELOCITY = 35.0;
-    public static final double AIR_DRAG = 0.985;
 
     public static final double WALK_SPEED = 4.3;
     public static final double SPRINT_SPEED = 5.6;
     public static final double GROUND_ACCEL = 30.0;
     public static final double AIR_ACCEL = 8.0;
-    public static final double GROUND_FRICTION = 12.0;
+
+    // Requested friction model: ~10%/tick on ground, ~2%/tick in air.
+    public static final double GROUND_FRICTION_PER_TICK = 0.90;
+    public static final double AIR_FRICTION_PER_TICK = 0.98;
 
     public static final double JUMP_BUFFER_TIME = 0.15;
     public static final double COYOTE_TIME = 0.10;
@@ -33,11 +37,10 @@ public class PhysicsEngine {
         p.velocityX = approach(p.velocityX, targetVX, accel * dt);
         p.velocityZ = approach(p.velocityZ, targetVZ, accel * dt);
 
-        if (len < 0.0001 && p.onGround) {
-            double frictionStep = GROUND_FRICTION * dt;
-            p.velocityX = approach(p.velocityX, 0, frictionStep);
-            p.velocityZ = approach(p.velocityZ, 0, frictionStep);
-        }
+        double tickScale = dt * TICKS_PER_SECOND;
+        double friction = Math.pow(p.onGround ? GROUND_FRICTION_PER_TICK : AIR_FRICTION_PER_TICK, tickScale);
+        p.velocityX *= friction;
+        p.velocityZ *= friction;
 
         p.move(p.velocityX * dt, p.velocityZ * dt, world);
     }
@@ -52,12 +55,12 @@ public class PhysicsEngine {
         }
         p.coyoteTimer = Math.max(0, p.coyoteTimer - dt);
 
-        p.velocityY -= GRAVITY * dt;
-        if (p.velocityY < -TERMINAL_VELOCITY) {
-            p.velocityY = -TERMINAL_VELOCITY;
+        double tickScale = dt * TICKS_PER_SECOND;
+        p.velocityY -= GRAVITY_PER_TICK * tickScale;
+        if (p.velocityY < -TERMINAL_VELOCITY_PER_TICK * TICKS_PER_SECOND) {
+            p.velocityY = -TERMINAL_VELOCITY_PER_TICK * TICKS_PER_SECOND;
         }
 
-        p.velocityY *= Math.pow(AIR_DRAG, dt * 60.0);
         p.y += p.velocityY * dt;
 
         if (!p.onGround && p.velocityY < 0) {

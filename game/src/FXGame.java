@@ -10,6 +10,8 @@ import ui.HudRenderer;
 import world.ChunkWorldIO;
 
 public class FXGame extends Application {
+    private static final double FIXED_TIMESTEP = 1.0 / 120.0;
+
     private final FXGameState state = new FXGameState();
 
     private FXGameUpdateSystem updateSystem;
@@ -39,6 +41,7 @@ public class FXGame extends Application {
 
         new AnimationTimer() {
             long last;
+            double accumulator = 0.0;
 
             @Override
             public void handle(long now) {
@@ -47,12 +50,18 @@ public class FXGame extends Application {
                     return;
                 }
 
-                double dt = (now - last) / 1_000_000_000.0;
-                dt = Math.min(dt, 0.05);
-
-                updateSystem.update(state, dt);
-                renderSystem.render(g, state);
+                double frameDt = (now - last) / 1_000_000_000.0;
+                frameDt = Math.min(frameDt, 0.05);
                 last = now;
+
+                accumulator += frameDt;
+                while (accumulator >= FIXED_TIMESTEP) {
+                    updateSystem.update(state, FIXED_TIMESTEP);
+                    accumulator -= FIXED_TIMESTEP;
+                }
+
+                double alpha = Math.max(0.0, Math.min(1.0, accumulator / FIXED_TIMESTEP));
+                renderSystem.render(g, state, alpha);
             }
         }.start();
     }

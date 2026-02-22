@@ -11,6 +11,7 @@ final class FXGameUpdateSystem {
     }
 
     void update(FXGameState state, double dt) {
+        state.player.capturePreviousTransform();
         state.input.updateLookSmoothing(dt);
 
         state.player.yaw = state.input.yaw;

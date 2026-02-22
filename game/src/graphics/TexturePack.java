@@ -14,9 +14,15 @@ public class TexturePack {
 
     // Prompt used for creating additional atlas tiles in the same style.
     public static final String TEXTURE_PROMPT_TEMPLATE =
-            "Professional 16x16 pixel art texture for a voxel game, [BLOCK TYPE], top-down view, " +
-                    "seamless tiling, limited color palette, vibrant hue shifting, sharp edges, " +
-                    "no blur, Minecraft aesthetic, high contrast.";
+            "Professional 16x16 pixel art texture for a voxel game block, [Material Name], seamless tiling on all axes, " +
+                    "1:1 aspect ratio. Use a limited 8-bit color palette with hue shifting (e.g., purples in shadows, " +
+                    "yellows in highlights). Ensure sharp nearest-neighbor edges, zero blur, and no baked-in 3D lighting " +
+                    "or shadows. Output should look like a flat, clean asset from a high-quality Minecraft texture pack.";
+
+    public static final String TEXTURE_SHEET_PROMPT_TEMPLATE =
+            "Texture sheet for a 3D voxel game, [Material], 16x16 pixel art resolution, perfectly tileable/seamless " +
+                    "on all sides, flat lighting, limited color palette with vibrant hue shifting, sharp pixel edges, " +
+                    "no 3D shadows or blur, high contrast, top-down perspective, clean grid layout.";
 
     private final Image atlas;
     private final int atlasCols;

@@ -14,12 +14,12 @@ final class FXGameRenderSystem {
         this.textures = textures;
     }
 
-    void render(GraphicsContext g, FXGameState state) {
+    void render(GraphicsContext g, FXGameState state, double alpha) {
         double viewBob = state.player.onGround
                 ? Math.sin(state.walkTime) * Math.min(0.06, Math.hypot(state.player.velocityX, state.player.velocityZ) * 0.01)
                 : 0;
 
-        firstPersonRenderer.render(g, state.world, state.player, state.player.yaw, state.player.pitch, textures, viewBob);
+        firstPersonRenderer.render(g, state.world, state.player, state.player.yaw, state.player.pitch, textures, viewBob, state.input.sprint, alpha);
 
         hudRenderer.renderCrosshair(g);
         hudRenderer.renderHotbar(g, state.hotbar, state.selectedSlot, textures, state.inventory);

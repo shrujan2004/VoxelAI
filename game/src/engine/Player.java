@@ -20,6 +20,10 @@ public class Player {
         this.z = z;
     }
 
+    public double eyeY() {
+        return y + HEIGHT * 0.9;
+    }
+
     /* ================================
        Horizontal movement with collision
        ================================ */

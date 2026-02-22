@@ -13,6 +13,8 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
+
+import java.io.File;
 import ui.HudRenderer;
 import world.BlockType;
 import world.ChunkWorld;
@@ -143,11 +145,18 @@ public class FXGame extends Application {
     }
 
     private Image loadImage(String path) {
-        try {
-            return new Image(java.nio.file.Path.of(path).toUri().toString());
-        } catch (Exception ignored) {
-            return null;
+        return loadImage(path, "../Player male/male_arm.png", "Player male/male_arm.png");
+    }
+
+    private Image loadImage(String... candidates) {
+        for (String candidate : candidates) {
+            if (candidate == null) continue;
+            File file = new File(candidate);
+            if (file.exists()) {
+                return new Image(file.toURI().toString());
+            }
         }
+        return null;
     }
 
     public static void main(String[] args) {

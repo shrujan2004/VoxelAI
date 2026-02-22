@@ -25,6 +25,10 @@ public class Player {
 
     public double jumpBufferTimer = 0;
 
+    public double maxHealth = 20.0;
+    public double health = 20.0;
+    public double fallDistance = 0;
+
     public Player(double x, double y, double z) {
         this.x = x;
         this.y = y;

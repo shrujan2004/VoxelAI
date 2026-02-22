@@ -26,19 +26,9 @@ public class FXGame extends Application {
 
     private final PlayerInputState input = new PlayerInputState();
 
- private final BlockType[] hotbar = {
-    BlockType.DIRT,
-    BlockType.GRASS,
-    BlockType.STONE,
-    BlockType.WOOD,
-    BlockType.SAND,
-    BlockType.GLASS,
-    BlockType.WATER,
-    BlockType.AIR,
-    BlockType.AIR
-};
-{
+    private final BlockType[] hotbar = createDefaultHotbar();
 
+    private int selectedSlot = 0;
     private double walkTime = 0;
     private RaycastHit targetHit;
 
@@ -47,16 +37,6 @@ public class FXGame extends Application {
 
     private FirstPersonRenderer firstPersonRenderer;
     private HudRenderer hudRenderer;
-
-    private double yaw = 0;
-
-    private Image atlas;
-
-    private static final int TILE_SIZE = 16;
-    private static final int ATLAS_COLS = 4;
-
-    };
-    private int selectedSlot = 0;
 
     @Override
     public void start(Stage stage) {
@@ -72,7 +52,7 @@ public class FXGame extends Application {
 
         bindInput(scene);
 
-        stage.setTitle("VoxelAI – FPV + Hotbar + Split Architecture");
+        stage.setTitle("VoxelAI - FPV + Hotbar + Split Architecture");
         stage.setScene(scene);
         stage.show();
 
@@ -91,6 +71,15 @@ public class FXGame extends Application {
                 last = now;
             }
         }.start();
+    }
+
+
+    private BlockType[] createDefaultHotbar() {
+        return new BlockType[]{
+                BlockType.GRASS, BlockType.DIRT, BlockType.STONE,
+                BlockType.SAND, BlockType.WOOD, BlockType.GLASS,
+                BlockType.WATER, BlockType.GRASS, BlockType.STONE
+        };
     }
 
     private void bindInput(Scene scene) {

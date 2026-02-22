@@ -8,6 +8,8 @@ public class Player {
 
     // REQUIRED by PhysicsEngine (Option A)
     public double velocityY = 0;
+    public double velocityX = 0;
+    public double velocityZ = 0;
     public boolean onGround = false;
 
     // Collision box

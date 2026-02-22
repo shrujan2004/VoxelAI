@@ -8,6 +8,8 @@ public class Player {
 
     // REQUIRED by PhysicsEngine (Option A)
     public double velocityY = 0;
+    public double velocityX = 0;
+    public double velocityZ = 0;
     public boolean onGround = false;
 
     // Collision box
@@ -18,6 +20,10 @@ public class Player {
         this.x = x;
         this.y = y;
         this.z = z;
+    }
+
+    public double eyeY() {
+        return y + HEIGHT * 0.9;
     }
 
     /* ================================

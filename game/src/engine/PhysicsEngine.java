@@ -4,10 +4,12 @@ import world.ChunkWorld;
 
 public class PhysicsEngine {
 
-    // Classic voxel-style per-tick numbers (20 ticks/sec) adapted to dt.
+    // Classic voxel-style per-tick numbers (20 ticks/sec) adapted to SI-like units.
     private static final double TICKS_PER_SECOND = 20.0;
     public static final double GRAVITY_PER_TICK = 0.08;
+    public static final double GRAVITY = GRAVITY_PER_TICK * TICKS_PER_SECOND * TICKS_PER_SECOND;
     public static final double TERMINAL_VELOCITY_PER_TICK = 3.92;
+    public static final double TERMINAL_VELOCITY = TERMINAL_VELOCITY_PER_TICK * TICKS_PER_SECOND;
     public static final double JUMP_POWER = 8.5;
 
     public static final double WALK_SPEED = 4.3;
@@ -55,10 +57,9 @@ public class PhysicsEngine {
         }
         p.coyoteTimer = Math.max(0, p.coyoteTimer - dt);
 
-        double tickScale = dt * TICKS_PER_SECOND;
-        p.velocityY -= GRAVITY_PER_TICK * tickScale;
-        if (p.velocityY < -TERMINAL_VELOCITY_PER_TICK * TICKS_PER_SECOND) {
-            p.velocityY = -TERMINAL_VELOCITY_PER_TICK * TICKS_PER_SECOND;
+        p.velocityY -= GRAVITY * dt;
+        if (p.velocityY < -TERMINAL_VELOCITY) {
+            p.velocityY = -TERMINAL_VELOCITY;
         }
 
         p.y += p.velocityY * dt;
@@ -69,15 +70,20 @@ public class PhysicsEngine {
 
         if (collides(p, world)) {
             if (p.velocityY < 0) {
-                while (collides(p, world)) p.y += 0.005;
+                for (int i = 0; i < 200 && collides(p, world); i++) p.y += 0.005;
                 p.onGround = true;
                 p.coyoteTimer = COYOTE_TIME;
             } else {
-                while (collides(p, world)) p.y -= 0.005;
+                for (int i = 0; i < 200 && collides(p, world); i++) p.y -= 0.005;
             }
             p.velocityY = 0;
         } else {
             p.onGround = false;
+        }
+
+        if (!p.onGround && p.velocityY <= 0 && isStandingOnGround(p, world, 0.04)) {
+            p.onGround = true;
+            p.velocityY = 0;
         }
 
         if (!wasGrounded && p.onGround) {
@@ -98,6 +104,25 @@ public class PhysicsEngine {
         if (p.fallDistance <= safe) return;
         double damage = (p.fallDistance - safe) * 2.0;
         p.damage(damage);
+    }
+
+
+    private static boolean isStandingOnGround(Player p, ChunkWorld world, double epsilon) {
+        double feetY = p.y - epsilon;
+        int minX = (int) Math.floor(p.x - Player.RADIUS);
+        int maxX = (int) Math.floor(p.x + Player.RADIUS);
+        int y = (int) Math.floor(feetY);
+        int minZ = (int) Math.floor(p.z - Player.RADIUS);
+        int maxZ = (int) Math.floor(p.z + Player.RADIUS);
+
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                if (world.isSolid(x, y, z)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static double approach(double value, double target, double delta) {

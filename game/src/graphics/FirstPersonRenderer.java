@@ -102,6 +102,13 @@ public class FirstPersonRenderer {
             double screenY,
             double screenHeight
     ) {
+        Image tileImage = textures.tileForFace(block, hit.faceY);
+        if (tileImage != null) {
+            int tx = sampleTextureX(px, py, pz, dx, dy, dz, hit.distance, hit.faceX, hit.faceY, hit.faceZ);
+            g.drawImage(tileImage, tx, 0, 1, TexturePack.TILE_SIZE, screenX, screenY, 1, screenHeight);
+            return;
+        }
+
         Image atlas = textures.atlas();
         if (atlas != null) {
             TexturePack.AtlasUV uv = textures.atlasUvForFace(block, hit.faceY);
@@ -110,13 +117,6 @@ public class FirstPersonRenderer {
                 g.drawImage(atlas, uv.sx() + tx, uv.sy(), 1, TexturePack.TILE_SIZE, screenX, screenY, 1, screenHeight);
                 return;
             }
-        }
-
-        Image tileImage = textures.tileForFace(block, hit.faceY);
-        if (tileImage != null) {
-            int tx = sampleTextureX(px, py, pz, dx, dy, dz, hit.distance, hit.faceX, hit.faceY, hit.faceZ);
-            g.drawImage(tileImage, tx, 0, 1, TexturePack.TILE_SIZE, screenX, screenY, 1, screenHeight);
-            return;
         }
 
         g.setFill(BlockVisuals.colorForBlock(block, world.getSurfaceHeight(hit.x, hit.z)));

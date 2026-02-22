@@ -137,9 +137,15 @@ public class TexturePack {
     private Image loadImage(String... candidates) {
         for (String candidate : candidates) {
             if (candidate == null) continue;
+
             File f = new File(candidate);
             if (f.exists()) {
                 return new Image(f.toURI().toString());
+            }
+
+            var resource = TexturePack.class.getClassLoader().getResource(candidate);
+            if (resource != null) {
+                return new Image(resource.toExternalForm());
             }
         }
         return null;

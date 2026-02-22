@@ -1,14 +1,22 @@
 import engine.PhysicsEngine;
 import engine.Player;
+import engine.RaycastHit;
+import gameplay.CraftingSystem;
+import gameplay.Inventory;
+import gameplay.MiningSystem;
+import graphics.FirstPersonRenderer;
+import graphics.HudRenderer;
+import graphics.TexturePack;
+import input.PlayerInputState;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
-import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
 import javafx.stage.Stage;
+import world.BlockType;
 import world.ChunkWorld;
 
 public class FXGame extends Application {
@@ -17,34 +25,40 @@ public class FXGame extends Application {
     private static final int HEIGHT = 720;
 
     private final ChunkWorld world = new ChunkWorld();
-    private final Player player = new Player(10, 6, 10);
+    private final Player player = new Player(10, 7, 10);
 
-    private boolean w, a, s, d;
-    private boolean jumpRequest;
+    private final PlayerInputState input = new PlayerInputState();
+    private final Inventory inventory = new Inventory();
+    private final CraftingSystem craftingSystem = new CraftingSystem();
+    private final MiningSystem miningSystem = new MiningSystem();
+
+    private final BlockType[] hotbar = createDefaultHotbar();
+
+    private int selectedSlot = 0;
+    private double walkTime = 0;
+    private RaycastHit targetHit;
+
+    private Image maleArm;
+    private TexturePack textures;
+
+    private FirstPersonRenderer firstPersonRenderer;
+    private HudRenderer hudRenderer;
 
     @Override
     public void start(Stage stage) {
-
         Canvas canvas = new Canvas(WIDTH, HEIGHT);
         GraphicsContext g = canvas.getGraphicsContext2D();
         Scene scene = new Scene(new javafx.scene.layout.StackPane(canvas));
 
-        scene.setOnKeyPressed(e -> {
-            if (e.getCode() == KeyCode.W) w = true;
-            if (e.getCode() == KeyCode.S) s = true;
-            if (e.getCode() == KeyCode.A) a = true;
-            if (e.getCode() == KeyCode.D) d = true;
-            if (e.getCode() == KeyCode.SPACE) jumpRequest = true;
-        });
+        firstPersonRenderer = new FirstPersonRenderer(WIDTH, HEIGHT);
+        hudRenderer = new HudRenderer(WIDTH, HEIGHT);
 
-        scene.setOnKeyReleased(e -> {
-            if (e.getCode() == KeyCode.W) w = false;
-            if (e.getCode() == KeyCode.S) s = false;
-            if (e.getCode() == KeyCode.A) a = false;
-            if (e.getCode() == KeyCode.D) d = false;
-        });
+        maleArm = loadImage("game/Player male/male_arm.png");
+        textures = new TexturePack("game/tiles/atlas.png");
 
-        stage.setTitle("VoxelAI – Stable Physics Core");
+        bindInput(scene);
+
+        stage.setTitle("VoxelAI - Now a Game (health/crafting/inventory)");
         stage.setScene(scene);
         stage.show();
 
@@ -65,44 +79,115 @@ public class FXGame extends Application {
         }.start();
     }
 
+    private BlockType[] createDefaultHotbar() {
+        return new BlockType[]{
+                BlockType.GRASS, BlockType.DIRT, BlockType.STONE,
+                BlockType.SAND, BlockType.WOOD, BlockType.GLASS,
+                BlockType.WATER, BlockType.GRASS, BlockType.STONE
+        };
+    }
+
+    private void bindInput(Scene scene) {
+        scene.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.W) input.forward = true;
+            if (e.getCode() == KeyCode.S) input.back = true;
+            if (e.getCode() == KeyCode.A) input.left = true;
+            if (e.getCode() == KeyCode.D) input.right = true;
+            if (e.getCode() == KeyCode.SHIFT) input.sprint = true;
+            if (e.getCode() == KeyCode.LEFT) input.turnLeft();
+            if (e.getCode() == KeyCode.RIGHT) input.turnRight();
+            if (e.getCode() == KeyCode.UP) input.lookUp();
+            if (e.getCode() == KeyCode.DOWN) input.lookDown();
+            if (e.getCode() == KeyCode.SPACE) input.jumpRequested = true;
+
+            if (e.getCode() == KeyCode.F) input.breakHeld = true;
+            if (e.getCode() == KeyCode.R) input.placeRequested = true;
+            if (e.getCode() == KeyCode.C) input.craftRequested = true;
+
+            if (e.getCode().isDigitKey()) {
+                String name = e.getCode().getName();
+                if (name.length() == 1) {
+                    int idx = Integer.parseInt(name) - 1;
+                    if (idx >= 0 && idx < hotbar.length) selectedSlot = idx;
+                }
+            }
+        });
+
+        scene.setOnKeyReleased(e -> {
+            if (e.getCode() == KeyCode.W) input.forward = false;
+            if (e.getCode() == KeyCode.S) input.back = false;
+            if (e.getCode() == KeyCode.A) input.left = false;
+            if (e.getCode() == KeyCode.D) input.right = false;
+            if (e.getCode() == KeyCode.SHIFT) input.sprint = false;
+            if (e.getCode() == KeyCode.F) input.breakHeld = false;
+        });
+    }
+
     private void update(double dt) {
+        PhysicsEngine.updateHorizontal(player, world, dt, input.moveX(), input.moveZ(), input.sprint);
+        PhysicsEngine.update(player, world, dt, input.jumpRequested);
+        input.jumpRequested = false;
 
-        double speed = 5.0 * dt;
+        double speed = Math.hypot(player.velocityX, player.velocityZ);
+        walkTime += speed * dt * 5.5;
 
-        double dx = 0, dz = 0;
-        if (w) dz -= speed;
-        if (s) dz += speed;
-        if (a) dx -= speed;
-        if (d) dx += speed;
+        targetHit = firstPersonRenderer.renderTargetOnly(world, player, input.yaw, input.pitch);
 
-        player.move(dx, dz, world);
+        if (input.breakHeld && targetHit != null) {
+            BlockType hitBlock = world.getBlock(targetHit.x, targetHit.y, targetHit.z);
+            if (miningSystem.tickBreak(hitBlock, targetHit.x, targetHit.y, targetHit.z, dt)) {
+                world.breakBlock(targetHit.x, targetHit.y, targetHit.z);
+                inventory.add(hitBlock, 1);
+            }
+        } else {
+            miningSystem.reset();
+        }
 
-        PhysicsEngine.update(player, world, dt, jumpRequest);
-        jumpRequest = false;
+        if (input.placeRequested && targetHit != null) {
+            input.placeRequested = false;
+            placeSelectedBlock();
+        }
+
+        if (input.craftRequested) {
+            input.craftRequested = false;
+            craftingSystem.craftStoneFromDirt(inventory);
+            craftingSystem.craftGlassFromSand(inventory);
+            craftingSystem.craftWoodFromGrass(inventory);
+        }
+    }
+
+    private void placeSelectedBlock() {
+        BlockType selected = hotbar[selectedSlot];
+        if (selected == BlockType.AIR || selected == BlockType.WATER) return;
+        if (!inventory.remove(selected, 1)) return;
+
+        int px = targetHit.x - targetHit.faceX;
+        int py = targetHit.y - targetHit.faceY;
+        int pz = targetHit.z - targetHit.faceZ;
+
+        if (world.getBlock(px, py, pz) == BlockType.AIR) {
+            world.setBlock(px, py, pz, selected);
+        } else {
+            inventory.add(selected, 1);
+        }
     }
 
     private void render(GraphicsContext g) {
+        firstPersonRenderer.render(g, world, player, input.yaw, input.pitch, textures);
 
-        // Sky
-        g.setFill(Color.SKYBLUE);
-        g.fillRect(0, 0, WIDTH, HEIGHT / 2);
+        hudRenderer.renderCrosshair(g);
+        hudRenderer.renderHotbar(g, hotbar, selectedSlot, textures, inventory);
+        hudRenderer.renderPlayerHand(g, maleArm, walkTime);
+        hudRenderer.renderTerrainMiniView(g, world, player, 20, HEIGHT - 260, 320, 220);
+        hudRenderer.renderStats(g, player, input.yaw, input.sprint, targetHit, hotbar[selectedSlot], miningSystem.progress());
+    }
 
-        // Ground
-        g.setFill(Color.GREEN);
-        g.fillRect(0, HEIGHT / 2, WIDTH, HEIGHT / 2);
-
-        // Player indicator
-        g.setFill(Color.CYAN);
-        g.fillOval(WIDTH / 2 - 6, HEIGHT / 2 - 6, 12, 12);
-
-        // HUD
-        g.setFill(Color.WHITE);
-        g.setFont(Font.font("Consolas", 18));
-        g.fillText(
-                String.format("X %.2f  Y %.2f  Z %.2f", player.x, player.y, player.z),
-                20, 30
-        );
-        g.fillText("WASD move | SPACE jump | Stable physics", 20, 55);
+    private Image loadImage(String path) {
+        try {
+            return new Image(java.nio.file.Path.of(path).toUri().toString());
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     public static void main(String[] args) {

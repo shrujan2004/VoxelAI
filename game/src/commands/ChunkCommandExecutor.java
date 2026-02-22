@@ -23,14 +23,16 @@ public class ChunkCommandExecutor {
         int minZ = Math.min(z1, z2);
         int maxZ = Math.max(z1, z2);
 
+        int count = 0;
         for (int x = minX; x <= maxX; x++) {
             for (int y = minY; y <= maxY; y++) {
                 for (int z = minZ; z <= maxZ; z++) {
                     world.setBlock(x, y, z, type);
+                    count++;
                 }
             }
         }
 
-        System.out.println("✅ Filled " + ((maxX - minX + 1) * (maxY - minY + 1) * (maxZ - minZ + 1)) + " blocks with " + type);
+        System.out.println("✅ Filled " + count + " blocks with " + type);
     }
 }

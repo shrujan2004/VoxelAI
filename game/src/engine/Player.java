@@ -19,15 +19,9 @@ public class Player {
     public static final double HEIGHT = 1.8;
     public static final double STEP_HEIGHT = 0.6;
 
-    public double maxHealth = 20.0;
-    public double health = 20.0;
-    public double fallDistance = 0;
-
-    public double jumpBufferTimer = 0;
-
-    public double maxHealth = 20.0;
-    public double health = 20.0;
-    public double fallDistance = 0;
+    // Single authoritative health/fall state declarations
+    public double maxHealth = 20.0, health = 20.0, fallDistance = 0.0;
+    public double jumpBufferTimer = 0.0;
 
     public Player(double x, double y, double z) {
         this.x = x;

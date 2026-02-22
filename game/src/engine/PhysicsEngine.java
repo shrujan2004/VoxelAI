@@ -15,6 +15,8 @@ public class PhysicsEngine {
     public static final double AIR_ACCEL = 8.0;
     public static final double GROUND_FRICTION = 12.0;
 
+    public static final double JUMP_BUFFER_TIME = 0.15;
+
     public static void updateHorizontal(Player p, ChunkWorld world, double dt, double moveX, double moveZ, boolean sprint) {
         double desiredSpeed = sprint ? SPRINT_SPEED : WALK_SPEED;
         double len = Math.sqrt(moveX * moveX + moveZ * moveZ);
@@ -41,6 +43,12 @@ public class PhysicsEngine {
 
     public static void update(Player p, ChunkWorld world, double dt, boolean jumpRequest) {
         boolean wasGrounded = p.onGround;
+
+        if (jumpRequest) {
+            p.jumpBufferTimer = JUMP_BUFFER_TIME;
+        } else {
+            p.jumpBufferTimer = Math.max(0, p.jumpBufferTimer - dt);
+        }
 
         p.velocityY -= GRAVITY * dt;
         if (p.velocityY < -TERMINAL_VELOCITY) {
@@ -71,9 +79,10 @@ public class PhysicsEngine {
             p.fallDistance = 0;
         }
 
-        if (jumpRequest && p.onGround) {
+        if (p.jumpBufferTimer > 0 && p.onGround) {
             p.velocityY = JUMP_POWER;
             p.onGround = false;
+            p.jumpBufferTimer = 0;
         }
     }
 

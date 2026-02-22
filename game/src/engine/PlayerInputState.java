@@ -16,20 +16,29 @@ public class PlayerInputState {
     public double yaw = 0;
     public double pitch = -0.20;
 
+    public double targetYaw = 0;
+    public double targetPitch = -0.20;
+
     public void turnLeft() {
-        yaw -= Math.toRadians(6);
+        targetYaw -= Math.toRadians(6);
     }
 
     public void turnRight() {
-        yaw += Math.toRadians(6);
+        targetYaw += Math.toRadians(6);
     }
 
     public void lookUp() {
-        pitch = Math.max(-0.9, pitch - 0.08);
+        targetPitch = Math.max(-0.9, targetPitch - 0.08);
     }
 
     public void lookDown() {
-        pitch = Math.min(0.9, pitch + 0.08);
+        targetPitch = Math.min(0.9, targetPitch + 0.08);
+    }
+
+    public void updateLookSmoothing(double dt) {
+        double smoothing = Math.min(1.0, dt * 14.0);
+        yaw += (targetYaw - yaw) * smoothing;
+        pitch += (targetPitch - pitch) * smoothing;
     }
 
     public double moveX() {

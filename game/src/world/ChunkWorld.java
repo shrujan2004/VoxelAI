@@ -8,6 +8,9 @@ public class ChunkWorld {
     private final Map<Long, BlockType> edits = new HashMap<>();
 
     public BlockType getBlock(int x, int y, int z) {
+        BlockType edited = edits.get(key(x, y, z));
+        if (edited != null) return edited;
+
         int surface = getSurfaceHeight(x, z);
 
         if (y > surface) {
@@ -42,6 +45,41 @@ public class ChunkWorld {
         double waveC = Math.sin((x + z) * 0.11) * 0.9;
         int hills = (int) Math.round(waveA + waveB + waveC);
         return 4 + hills;
+    }
+
+    public void setBlock(int x, int y, int z, BlockType type) {
+        edits.put(key(x, y, z), type);
+    }
+
+    public void breakBlock(int x, int y, int z) {
+        edits.put(key(x, y, z), BlockType.AIR);
+    }
+
+    public Map<Long, BlockType> snapshotEdits() {
+        return new HashMap<>(edits);
+    }
+
+    public void restoreEdits(Map<Long, BlockType> saved) {
+        edits.clear();
+        edits.putAll(saved);
+    }
+
+    public long key(int x, int y, int z) {
+        return (((long) x) << 42) ^ (((long) y) << 21) ^ (z & 0x1FFFFF);
+    }
+
+    public int keyX(long key) {
+        return (int) (key >> 42);
+    }
+
+    public int keyY(long key) {
+        return (int) ((key >> 21) & 0x1FFFFF);
+    }
+
+    public int keyZ(long key) {
+        int z = (int) (key & 0x1FFFFF);
+        if ((z & 0x100000) != 0) z |= ~0x1FFFFF;
+        return z;
     }
 
     private int hash(int x, int z) {

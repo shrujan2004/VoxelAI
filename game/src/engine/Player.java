@@ -17,6 +17,13 @@ public class Player {
 
     public static final double RADIUS = 0.3;
     public static final double HEIGHT = 1.8;
+    public static final double STEP_HEIGHT = 0.6;
+
+    public double maxHealth = 20.0;
+    public double health = 20.0;
+    public double fallDistance = 0;
+
+    public double jumpBufferTimer = 0;
 
     public double maxHealth = 20.0;
     public double health = 20.0;
@@ -37,10 +44,34 @@ public class Player {
     }
 
     public void move(double dx, double dz, ChunkWorld world) {
+        moveAxisX(dx, world);
+        moveAxisZ(dz, world);
+    }
+
+    private void moveAxisX(double dx, ChunkWorld world) {
+        if (dx == 0) return;
+
         if (!collides(world, x + dx, y, z)) {
             x += dx;
+            return;
         }
+
+        if (onGround && !collides(world, x + dx, y + STEP_HEIGHT, z)) {
+            y += STEP_HEIGHT;
+            x += dx;
+        }
+    }
+
+    private void moveAxisZ(double dz, ChunkWorld world) {
+        if (dz == 0) return;
+
         if (!collides(world, x, y, z + dz)) {
+            z += dz;
+            return;
+        }
+
+        if (onGround && !collides(world, x, y + STEP_HEIGHT, z + dz)) {
+            y += STEP_HEIGHT;
             z += dz;
         }
     }

@@ -19,11 +19,12 @@ public class FirstPersonRenderer {
         this.height = height;
     }
 
-    public RaycastHit render(GraphicsContext g, ChunkWorld world, Player player, double yaw, double pitch, TexturePack textures) {
-        g.setFill(Color.SKYBLUE);
-        g.fillRect(0, 0, width, height / 2.0);
+    public RaycastHit render(GraphicsContext g, ChunkWorld world, Player player, double yaw, double pitch, TexturePack textures, double viewBob) {
+        renderSkyGradient(g);
+
+        double horizon = height / 2.0 + viewBob * 28.0;
         g.setFill(Color.web("#4f8f3f"));
-        g.fillRect(0, height / 2.0, width, height / 2.0);
+        g.fillRect(0, horizon, width, height - horizon);
 
         double fov = Math.toRadians(75);
         for (int x = 0; x < width; x++) {
@@ -34,7 +35,7 @@ public class FirstPersonRenderer {
             double dz = -Math.cos(rayYaw);
             double dy = pitch;
 
-            RaycastHit hit = Raycaster.raycast(world, player.x, player.eyeY(), player.z, dx, dy, dz, 40);
+            RaycastHit hit = Raycaster.raycast(world, player.x, player.eyeY() + viewBob, player.z, dx, dy, dz, 40);
             if (hit == null) continue;
 
             BlockType block = world.getBlock(hit.x, hit.y, hit.z);
@@ -42,25 +43,26 @@ public class FirstPersonRenderer {
 
             double corrected = hit.distance * Math.cos(rayYaw - yaw);
             double columnHeight = Math.min(height, height / Math.max(0.08, corrected * 0.5));
-            double y0 = height / 2.0 - columnHeight / 2.0;
+            double y0 = horizon - columnHeight / 2.0;
 
             drawColumn(g, textures, block, world, player, hit, dx, dy, dz, x, y0, columnHeight);
 
-            double shade = BlockVisuals.shadeForFace(hit.faceX, hit.faceY, hit.faceZ);
-            if (shade < 1.0) {
-                g.setFill(Color.color(0, 0, 0, 1.0 - shade));
+            double faceShade = BlockVisuals.shadeForFace(hit.faceX, hit.faceY, hit.faceZ);
+            if (faceShade < 1.0) {
+                g.setFill(Color.color(0, 0, 0, 1.0 - faceShade));
                 g.fillRect(x, y0, 1, columnHeight);
             }
+
+            applyFog(g, x, y0, columnHeight, hit.distance);
         }
 
         return Raycaster.raycast(
                 world,
-                player.x, player.eyeY(), player.z,
+                player.x, player.eyeY() + viewBob, player.z,
                 Math.sin(yaw), pitch, -Math.cos(yaw),
                 12.0
         );
     }
-
 
     public RaycastHit renderTargetOnly(ChunkWorld world, Player player, double yaw, double pitch) {
         return Raycaster.raycast(
@@ -104,6 +106,28 @@ public class FirstPersonRenderer {
 
         g.setFill(BlockVisuals.colorForBlock(block, world.getSurfaceHeight(hit.x, hit.z)));
         g.fillRect(screenX, screenY, 1, screenHeight);
+    }
+
+    private void renderSkyGradient(GraphicsContext g) {
+        for (int y = 0; y < height / 2; y++) {
+            double t = y / (height / 2.0);
+            Color c = Color.color(
+                    0.36 + 0.20 * (1 - t),
+                    0.60 + 0.25 * (1 - t),
+                    0.90 + 0.08 * (1 - t)
+            );
+            g.setFill(c);
+            g.fillRect(0, y, width, 1);
+        }
+    }
+
+    private void applyFog(GraphicsContext g, int x, double y0, double h, double dist) {
+        double fogStart = 14.0;
+        double fogEnd = 36.0;
+        if (dist <= fogStart) return;
+        double t = Math.min(1.0, (dist - fogStart) / (fogEnd - fogStart));
+        g.setFill(Color.color(0.78, 0.87, 1.0, t * 0.75));
+        g.fillRect(x, y0, 1, h);
     }
 
     private int sampleTextureX(Player player, double dx, double dy, double dz, double dist, int faceX, int faceY, int faceZ) {

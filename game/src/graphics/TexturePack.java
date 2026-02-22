@@ -3,6 +3,7 @@ package graphics;
 import javafx.scene.image.Image;
 import world.BlockType;
 
+import java.io.File;
 import java.util.EnumMap;
 
 public class TexturePack {
@@ -14,11 +15,17 @@ public class TexturePack {
     private final EnumMap<BlockType, Image> blockTiles = new EnumMap<>(BlockType.class);
 
     public TexturePack(String atlasPath) {
-        this.atlas = loadImage(atlasPath);
+        this.atlas = loadImage(atlasPath,
+                "../tiles/atlas.png",
+                "tiles/atlas.png");
 
         for (BlockType type : BlockType.values()) {
             if (type.texture != null) {
-                blockTiles.put(type, loadImage("game/tiles/" + type.texture));
+                blockTiles.put(type, loadImage(
+                        "game/tiles/" + type.texture,
+                        "../tiles/" + type.texture,
+                        "tiles/" + type.texture
+                ));
             }
         }
     }
@@ -44,11 +51,14 @@ public class TexturePack {
         };
     }
 
-    private Image loadImage(String path) {
-        try {
-            return new Image(java.nio.file.Path.of(path).toUri().toString());
-        } catch (Exception ignored) {
-            return null;
+    private Image loadImage(String... candidates) {
+        for (String candidate : candidates) {
+            if (candidate == null) continue;
+            File f = new File(candidate);
+            if (f.exists()) {
+                return new Image(f.toURI().toString());
+            }
         }
+        return null;
     }
 }

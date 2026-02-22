@@ -20,6 +20,7 @@ public class FirstPersonRenderer {
     }
 
     public RaycastHit render(GraphicsContext g, ChunkWorld world, Player player, double yaw, double pitch, TexturePack textures, double viewBob) {
+        g.setImageSmoothing(false);
         renderSkyGradient(g);
 
         double horizon = height / 2.0 + viewBob * 28.0;
@@ -39,7 +40,7 @@ public class FirstPersonRenderer {
             if (hit == null) continue;
 
             BlockType block = world.getBlock(hit.x, hit.y, hit.z);
-            if (block == BlockType.AIR) continue;
+            if (block == BlockType.AIR || !isVisibleFace(world, hit)) continue;
 
             double corrected = hit.distance * Math.cos(rayYaw - yaw);
             double columnHeight = Math.min(height, height / Math.max(0.08, corrected * 0.5));
@@ -89,12 +90,12 @@ public class FirstPersonRenderer {
     ) {
         Image atlas = textures.atlas();
         if (atlas != null) {
-            int tile = textures.atlasIndex(block);
-            int tx = sampleTextureX(player, dx, dy, dz, hit.distance, hit.faceX, hit.faceY, hit.faceZ);
-            int sx = (tile % TexturePack.ATLAS_COLS) * TexturePack.TILE_SIZE + tx;
-            int sy = (tile / TexturePack.ATLAS_COLS) * TexturePack.TILE_SIZE;
-            g.drawImage(atlas, sx, sy, 1, TexturePack.TILE_SIZE, screenX, screenY, 1, screenHeight);
-            return;
+            TexturePack.AtlasUV uv = textures.atlasUvForFace(block, hit.faceY);
+            if (uv != null) {
+                int tx = sampleTextureX(player, dx, dy, dz, hit.distance, hit.faceX, hit.faceY, hit.faceZ);
+                g.drawImage(atlas, uv.sx() + tx, uv.sy(), 1, TexturePack.TILE_SIZE, screenX, screenY, 1, screenHeight);
+                return;
+            }
         }
 
         Image tileImage = textures.tileForFace(block, hit.faceY);
@@ -106,6 +107,14 @@ public class FirstPersonRenderer {
 
         g.setFill(BlockVisuals.colorForBlock(block, world.getSurfaceHeight(hit.x, hit.z)));
         g.fillRect(screenX, screenY, 1, screenHeight);
+    }
+
+
+    private boolean isVisibleFace(ChunkWorld world, RaycastHit hit) {
+        int outsideX = hit.x - hit.faceX;
+        int outsideY = hit.y - hit.faceY;
+        int outsideZ = hit.z - hit.faceZ;
+        return !world.isSolid(outsideX, outsideY, outsideZ);
     }
 
     private void renderSkyGradient(GraphicsContext g) {

@@ -32,6 +32,7 @@ public class HudRenderer {
     }
 
     public void renderHotbar(GraphicsContext g, BlockType[] hotbar, int selectedSlot, TexturePack textures, Inventory inventory) {
+        g.setImageSmoothing(false);
         double slotW = 52;
         double slotH = 52;
         double totalW = slotW * hotbar.length;

@@ -17,7 +17,17 @@ public class CameraRenderer {
                 }
 
                 BlockType block = world.getBlock(x, py, z);
-                System.out.print(block.render() + " ");
+                String glyph = switch (block) {
+                    case AIR -> ".";
+                    case GRASS -> "G";
+                    case DIRT -> "D";
+                    case STONE -> "S";
+                    case WOOD -> "W";
+                    case SAND -> "A";
+                    case GLASS -> "L";
+                    case WATER -> "~";
+                };
+                System.out.print(glyph + " ");
             }
             System.out.println();
         }

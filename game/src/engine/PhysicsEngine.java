@@ -18,7 +18,7 @@ public class PhysicsEngine {
     public static final double AIR_ACCEL = 8.0;
 
     // Requested friction model: ~10%/tick on ground, ~2%/tick in air.
-    public static final double GROUND_FRICTION_PER_TICK = 0.90;
+    public static final double GROUND_FRICTION_PER_TICK = 0.91;
     public static final double AIR_FRICTION_PER_TICK = 0.98;
 
     public static final double JUMP_BUFFER_TIME = 0.15;

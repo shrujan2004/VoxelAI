@@ -47,6 +47,25 @@ public class ChunkWorld {
         return 4 + hills;
     }
 
+
+    public VoxelChunk buildVoxelChunk(int chunkX, int chunkY, int chunkZ) {
+        VoxelChunk chunk = new VoxelChunk(chunkX, chunkY, chunkZ);
+        int baseX = chunkX * VoxelChunk.SIZE;
+        int baseY = chunkY * VoxelChunk.SIZE;
+        int baseZ = chunkZ * VoxelChunk.SIZE;
+
+        for (int z = 0; z < VoxelChunk.SIZE; z++) {
+            for (int y = 0; y < VoxelChunk.SIZE; y++) {
+                for (int x = 0; x < VoxelChunk.SIZE; x++) {
+                    BlockType b = getBlock(baseX + x, baseY + y, baseZ + z);
+                    chunk.setBlock(x, y, z, b);
+                }
+            }
+        }
+
+        return chunk;
+    }
+
     public void setBlock(int x, int y, int z, BlockType type) {
         edits.put(key(x, y, z), type);
     }

@@ -4,6 +4,12 @@ import world.ChunkWorld;
 
 public class Raycaster {
 
+    private static final double STEP = 0.05;
+
+    private Raycaster() {
+    }
+
+    // Pure query utility: does not mutate world or player state.
     public static RaycastHit raycast(
             ChunkWorld world,
             double ox, double oy, double oz,
@@ -17,7 +23,7 @@ public class Raycaster {
         int pz = (int) Math.floor(oz);
 
         while (dist < maxDist) {
-            dist += 0.05;
+            dist += STEP;
 
             double sx = ox + dx * dist;
             double sy = oy + dy * dist;
@@ -41,6 +47,7 @@ public class Raycaster {
             py = by;
             pz = bz;
         }
+
         return null;
     }
 }

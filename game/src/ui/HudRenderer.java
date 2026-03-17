@@ -123,7 +123,7 @@ public class HudRenderer {
         if (textures.atlas() != null) {
             TexturePack.AtlasUV uv = textures.atlasUvForFace(type, 0);
             if (uv != null) {
-                g.drawImage(textures.atlas(), uv.sx(), uv.sy(), TexturePack.TILE_SIZE, TexturePack.TILE_SIZE, x, y, 24, 24);
+                g.drawImage(textures.atlas(), uv.sx(), uv.sy(), TexturePack.ATLAS_TILE_SIZE, TexturePack.ATLAS_TILE_SIZE, x, y, 24, 24);
                 return;
             }
         }

@@ -48,3 +48,7 @@ outputType = "vnc"
 localPort = 8000
 externalPort = 8000
 exposeLocalhost = true
+
+[deployment]
+deploymentTarget = "vm"
+run = ["bash", "run_ai_server.sh"]

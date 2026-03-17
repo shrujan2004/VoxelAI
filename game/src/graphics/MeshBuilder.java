@@ -10,6 +10,9 @@ public class MeshBuilder {
     // vertex layout: position(3), uv(2), normal(3), aoBrightness(1)
     // This maps directly to OpenGL attribute streams used by glVertex + glTexCoord style pipelines.
     private static final int FLOATS_PER_VERTEX = 9;
+    public static final int POSITION_FLOATS = 3;
+    public static final int UV_FLOATS = 2;
+    public static final int STRIDE_BYTES = FLOATS_PER_VERTEX * Float.BYTES;
     private static final float UV_EPSILON = 0.001f;
 
     public ChunkMesh build(VoxelChunk chunk) {

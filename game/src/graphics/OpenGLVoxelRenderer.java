@@ -24,7 +24,8 @@ import java.util.Map;
  */
 public final class OpenGLVoxelRenderer {
 
-    private static final int TILES_PER_ROW = 16;
+    private static final int TILES_PER_ROW = TexturedVoxelAtlas.ATLAS_SIZE / TexturedVoxelAtlas.TILE_SIZE;
+    private static final int MAX_TILES = TILES_PER_ROW * TILES_PER_ROW;
 
     private int textureId;
     private final Map<String, Integer> tileIndexByName = new HashMap<>();
@@ -41,21 +42,36 @@ public final class OpenGLVoxelRenderer {
         this.tileIndexByName.clear();
         this.tileIndexByName.putAll(atlas.tileIndexByName());
         this.textureId = uploadAtlasAndBind(atlas.image());
-        OpenGLTextureAtlasUtil.applyNearestNeighborFiltering(textureId);
         enableTexturing();
+        OpenGLTextureAtlasUtil.applyNearestNeighborFiltering(textureId);
+    }
+
+    public float[] getUVsForTile(String tileFileName) {
+        int tileIndex = tileIndexByName.getOrDefault(tileFileName, 0);
+        return getUVsForAtlasIndex(tileIndex);
     }
 
     public float[] getUVsForTile(String tileFileName, int face) {
-        Integer tileIndex = tileIndexByName.get(tileFileName);
-        if (tileIndex == null) {
-            tileIndex = 0;
-        }
+        return getUVsForTile(tileFileName);
+    }
 
-        int blockId = tileIndex / 3;
-        int faceOffset = face == TexturedVoxelAtlas.FACE_TOP
-                ? TexturedVoxelAtlas.FACE_TOP
-                : (face == TexturedVoxelAtlas.FACE_BOTTOM ? TexturedVoxelAtlas.FACE_BOTTOM : TexturedVoxelAtlas.FACE_SIDE);
-        return TexturedVoxelAtlas.getUVs(blockId, faceOffset);
+
+    /**
+     * UV mapping formula for a 16x16 atlas grid:
+     * U = (column * 16) / 256
+     * V = (row * 16) / 256
+     */
+    public float[] getUVsForAtlasIndex(int tileIndex) {
+        int clamped = Math.max(0, Math.min(MAX_TILES - 1, tileIndex));
+        int column = clamped % TILES_PER_ROW;
+        int row = clamped / TILES_PER_ROW;
+
+        float u0 = (column * TexturedVoxelAtlas.TILE_SIZE) / (float) TexturedVoxelAtlas.ATLAS_SIZE;
+        float v0 = (row * TexturedVoxelAtlas.TILE_SIZE) / (float) TexturedVoxelAtlas.ATLAS_SIZE;
+        float u1 = ((column + 1) * TexturedVoxelAtlas.TILE_SIZE) / (float) TexturedVoxelAtlas.ATLAS_SIZE;
+        float v1 = ((row + 1) * TexturedVoxelAtlas.TILE_SIZE) / (float) TexturedVoxelAtlas.ATLAS_SIZE;
+
+        return new float[]{u0, v0, u1, v0, u1, v1, u0, v1};
     }
 
     /**
@@ -92,7 +108,7 @@ public final class OpenGLVoxelRenderer {
                     .forEach(tilePaths::add);
         }
 
-        if (tilePaths.size() > TexturedVoxelAtlas.ATLAS_SIZE) {
+        if (tilePaths.size() > MAX_TILES) {
             throw new IOException("Too many tiles for 16x16 atlas grid: " + tilePaths.size());
         }
 
@@ -176,6 +192,29 @@ public final class OpenGLVoxelRenderer {
             gl11.getMethod("glEnable", int.class).invoke(null, texture2D);
         } catch (Exception ignored) {
             // Safe in JavaFX/non-LWJGL contexts.
+        }
+    }
+
+
+    /**
+     * Configures VAO attributes for packed vertex format:
+     * position(3 floats) + uv(2 floats).
+     */
+    public void configureVaoForPositionAndUv(int positionAttribIndex, int uvAttribIndex, int strideBytes) {
+        try {
+            Class<?> gl20 = Class.forName("org.lwjgl.opengl.GL20");
+            int glFloat = Class.forName("org.lwjgl.opengl.GL11").getField("GL_FLOAT").getInt(null);
+
+            Method enable = gl20.getMethod("glEnableVertexAttribArray", int.class);
+            Method pointer = gl20.getMethod("glVertexAttribPointer", int.class, int.class, int.class, boolean.class, int.class, long.class);
+
+            enable.invoke(null, positionAttribIndex);
+            pointer.invoke(null, positionAttribIndex, 3, glFloat, false, strideBytes, 0L);
+
+            enable.invoke(null, uvAttribIndex);
+            pointer.invoke(null, uvAttribIndex, 2, glFloat, false, strideBytes, 3L * Float.BYTES);
+        } catch (Exception ignored) {
+            // Safe in non-LWJGL contexts.
         }
     }
 

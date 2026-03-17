@@ -40,7 +40,7 @@ public final class OpenGLVoxelRenderer {
                             if (image == null) {
                                 return;
                             }
-                            if (image.getWidth() != 16 || image.getHeight() != 16) {
+                            if (image.getWidth() <= 0 || image.getHeight() <= 0) {
                                 return;
                             }
 
@@ -97,6 +97,57 @@ public final class OpenGLVoxelRenderer {
      */
     public float[] unitFaceUVs() {
         return new float[]{0f, 0f, 1f, 0f, 1f, 1f, 0f, 1f};
+    }
+
+
+    /**
+     * Fixed-function pointer setup for packed MeshBuilder vertices.
+     * Layout: position(3), uv(2), normal(3), ao(1) => stride 36 bytes.
+     */
+    public void configureFixedFunctionPointers() {
+        try {
+            Class<?> gl11 = Class.forName("org.lwjgl.opengl.GL11");
+            int glFloat = gl11.getField("GL_FLOAT").getInt(null);
+
+            Method vertexPointer = gl11.getMethod("glVertexPointer", int.class, int.class, int.class, long.class);
+            Method texCoordPointer = gl11.getMethod("glTexCoordPointer", int.class, int.class, int.class, long.class);
+            Method normalPointer = gl11.getMethod("glNormalPointer", int.class, int.class, long.class);
+
+            int stride = MeshBuilder.STRIDE_BYTES;
+            vertexPointer.invoke(null, MeshBuilder.POSITION_FLOATS, glFloat, stride, 0L);
+            texCoordPointer.invoke(null, MeshBuilder.UV_FLOATS, glFloat, stride, (long) MeshBuilder.POSITION_FLOATS * Float.BYTES);
+            normalPointer.invoke(null, glFloat, stride, (long) (MeshBuilder.POSITION_FLOATS + MeshBuilder.UV_FLOATS) * Float.BYTES);
+        } catch (Exception ignored) {
+            // No-op outside LWJGL runtime.
+        }
+    }
+
+    public static String voxelVertexShader() {
+        return "#version 330 core\n" +
+                "layout(location=0) in vec3 a_Position;\n" +
+                "layout(location=1) in vec2 a_TexCoord;\n" +
+                "layout(location=2) in vec3 a_Normal;\n" +
+                "layout(location=3) in float a_AoBrightness;\n" +
+                "out vec2 v_TexCoord;\n" +
+                "out float v_AoBrightness;\n" +
+                "uniform mat4 u_MVP;\n" +
+                "void main(){\n" +
+                "    v_TexCoord = a_TexCoord;\n" +
+                "    v_AoBrightness = a_AoBrightness;\n" +
+                "    gl_Position = u_MVP * vec4(a_Position, 1.0);\n" +
+                "}\n";
+    }
+
+    public static String voxelFragmentShader() {
+        return "#version 330 core\n" +
+                "in vec2 v_TexCoord;\n" +
+                "in float v_AoBrightness;\n" +
+                "uniform sampler2D u_Texture;\n" +
+                "out vec4 fragColor;\n" +
+                "void main(){\n" +
+                "    vec4 texColor = texture(u_Texture, v_TexCoord);\n" +
+                "    fragColor = vec4(texColor.rgb * v_AoBrightness, texColor.a);\n" +
+                "}\n";
     }
 
     private int uploadTexture(BufferedImage image) {

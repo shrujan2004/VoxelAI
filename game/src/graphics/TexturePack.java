@@ -8,7 +8,8 @@ import java.util.EnumMap;
 
 public class TexturePack {
 
-    public static final int TILE_SIZE = 16;
+    public static final int TILE_SIZE = 128;
+    public static final int ATLAS_TILE_SIZE = 16;
     public static final int ATLAS_COLS = 4; // legacy fallback for callers that still rely on fixed atlas layout
     private static final int FACE_VARIANTS = 3; // top, side, bottom
 
@@ -37,8 +38,8 @@ public class TexturePack {
                 "../tiles/atlas.png",
                 "tiles/atlas.png");
 
-        this.atlasCols = atlas == null ? 0 : Math.max(1, (int) Math.floor(atlas.getWidth() / TILE_SIZE));
-        this.atlasRows = atlas == null ? 0 : Math.max(1, (int) Math.floor(atlas.getHeight() / TILE_SIZE));
+        this.atlasCols = atlas == null ? 0 : Math.max(1, (int) Math.floor(atlas.getWidth() / ATLAS_TILE_SIZE));
+        this.atlasRows = atlas == null ? 0 : Math.max(1, (int) Math.floor(atlas.getHeight() / ATLAS_TILE_SIZE));
 
         for (BlockType type : BlockType.values()) {
             if (type.topTexture != null) {
@@ -91,9 +92,9 @@ public class TexturePack {
             return null;
         }
 
-        int sx = (tileIndex % atlasCols) * TILE_SIZE;
-        int sy = (tileIndex / atlasCols) * TILE_SIZE;
-        return new AtlasUV(sx, sy, TILE_SIZE, TILE_SIZE);
+        int sx = (tileIndex % atlasCols) * ATLAS_TILE_SIZE;
+        int sy = (tileIndex / atlasCols) * ATLAS_TILE_SIZE;
+        return new AtlasUV(sx, sy, ATLAS_TILE_SIZE, ATLAS_TILE_SIZE);
     }
 
     public int atlasIndex(BlockType type) {
@@ -144,7 +145,7 @@ public class TexturePack {
         int h = (int) Math.round(texture.getHeight());
         if (w != TILE_SIZE || h != TILE_SIZE) {
             System.err.println("[TexturePack] Non-standard texture size for " + type +
-                    ": " + w + "x" + h + ". Expected 16x16 to avoid mixels.");
+                    ": " + w + "x" + h + ". Using adaptive sampling for this texture.");
         }
     }
 
@@ -163,6 +164,17 @@ public class TexturePack {
             }
         }
         return null;
+    }
+
+    public int effectiveTileSize(Image texture) {
+        if (texture == null) {
+            return TILE_SIZE;
+        }
+
+        int w = (int) Math.round(texture.getWidth());
+        int h = (int) Math.round(texture.getHeight());
+        int candidate = Math.min(w, h);
+        return candidate > 0 ? candidate : TILE_SIZE;
     }
 
     public record AtlasUV(int sx, int sy, int sw, int sh) {

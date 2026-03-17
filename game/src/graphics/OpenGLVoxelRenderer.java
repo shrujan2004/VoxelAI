@@ -1,7 +1,6 @@
 package graphics;
 
 import javax.imageio.ImageIO;
-import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -9,136 +8,98 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
- * OpenGL textured voxel renderer helper that:
- * - loads .png tiles from game/tiles
- * - stitches them into a single texture atlas
- * - uploads/binds atlas with GL_TEXTURE_2D
- * - draws textured faces with glTexCoord2f before glVertex3f
+ * OpenGL textured voxel renderer helper focused on per-tile PNG texture loading.
+ *
+ * Flow:
+ * 1) loadTileTextures(Paths.get("game/tiles"));
+ * 2) beginTexturedRenderLoop();
+ * 3) bindTileTexture("grass_top.png");
+ * 4) drawFaceImmediate(vertices, uvs);
  */
 public final class OpenGLVoxelRenderer {
 
-    private static final int TILES_PER_ROW = TexturedVoxelAtlas.ATLAS_SIZE / TexturedVoxelAtlas.TILE_SIZE;
-    private static final int MAX_TILES = TILES_PER_ROW * TILES_PER_ROW;
-
-    private int textureId;
-    private final Map<String, Integer> tileIndexByName = new HashMap<>();
-
-    public int textureId() {
-        return textureId;
-    }
+    private final Map<String, Integer> textureIdsByTile = new HashMap<>();
 
     /**
-     * Initialization phase for texture binding pipeline.
+     * Loads each 16x16 PNG from game/tiles and uploads it as its own GL texture.
      */
-    public void initializeTextureAtlas(Path tilesDir) throws IOException {
-        AtlasBuild atlas = buildAtlasFromTiles(tilesDir);
-        this.tileIndexByName.clear();
-        this.tileIndexByName.putAll(atlas.tileIndexByName());
-        this.textureId = uploadAtlasAndBind(atlas.image());
-        enableTexturing();
-        OpenGLTextureAtlasUtil.applyNearestNeighborFiltering(textureId);
-    }
+    public void loadTileTextures(Path tilesDir) throws IOException {
+        textureIdsByTile.clear();
 
-    public float[] getUVsForTile(String tileFileName) {
-        int tileIndex = tileIndexByName.getOrDefault(tileFileName, 0);
-        return getUVsForAtlasIndex(tileIndex);
-    }
+        try (var stream = Files.list(tilesDir)) {
+            stream
+                    .filter(p -> p.getFileName().toString().toLowerCase().endsWith(".png"))
+                    .sorted((a, b) -> a.getFileName().toString().compareTo(b.getFileName().toString()))
+                    .forEach(path -> {
+                        try {
+                            BufferedImage image = ImageIO.read(path.toFile());
+                            if (image == null) {
+                                return;
+                            }
+                            if (image.getWidth() != 16 || image.getHeight() != 16) {
+                                return;
+                            }
 
-    public float[] getUVsForTile(String tileFileName, int face) {
-        return getUVsForTile(tileFileName);
+                            int textureId = uploadTexture(image);
+                            if (textureId != 0) {
+                                textureIdsByTile.put(path.getFileName().toString(), textureId);
+                            }
+                        } catch (IOException ignored) {
+                            // Skip unreadable textures; continue loading remaining files.
+                        }
+                    });
+        }
     }
-
 
     /**
-     * UV mapping formula for a 16x16 atlas grid:
-     * U = (column * 16) / 256
-     * V = (row * 16) / 256
+     * Enables GL_TEXTURE_2D and neutralizes tinting color (white).
      */
-    public float[] getUVsForAtlasIndex(int tileIndex) {
-        int clamped = Math.max(0, Math.min(MAX_TILES - 1, tileIndex));
-        int column = clamped % TILES_PER_ROW;
-        int row = clamped / TILES_PER_ROW;
-
-        float u0 = (column * TexturedVoxelAtlas.TILE_SIZE) / (float) TexturedVoxelAtlas.ATLAS_SIZE;
-        float v0 = (row * TexturedVoxelAtlas.TILE_SIZE) / (float) TexturedVoxelAtlas.ATLAS_SIZE;
-        float u1 = ((column + 1) * TexturedVoxelAtlas.TILE_SIZE) / (float) TexturedVoxelAtlas.ATLAS_SIZE;
-        float v1 = ((row + 1) * TexturedVoxelAtlas.TILE_SIZE) / (float) TexturedVoxelAtlas.ATLAS_SIZE;
-
-        return new float[]{u0, v0, u1, v0, u1, v1, u0, v1};
+    public void beginTexturedRenderLoop() {
+        invokeEnableTexture2d();
+        invokeGlColor3f(1.0f, 1.0f, 1.0f);
     }
 
     /**
-     * Immediate mode helper: emits glTexCoord2f(u,v) before glVertex3f(x,y,z).
+     * Binds a previously loaded tile texture by filename (e.g. grass_top.png).
+     */
+    public boolean bindTileTexture(String tileFileName) {
+        Integer textureId = textureIdsByTile.get(tileFileName);
+        if (textureId == null) {
+            return false;
+        }
+        return invokeBindTexture2d(textureId);
+    }
+
+    /**
+     * Emits glTexCoord2f(u,v) immediately before glVertex3f(x,y,z).
      */
     public void drawFaceImmediate(float[][] vertices, float[] uvs) {
         invokeGlColor3f(1.0f, 1.0f, 1.0f);
-        invokeBeginTriangles();
-        for (int i = 0; i < vertices.length; i++) {
-            int uvIndex = Math.min(3, i % 4) * 2;
+        invokeBeginQuads();
+
+        int vertexCount = Math.min(vertices.length, 4);
+        for (int i = 0; i < vertexCount; i++) {
+            int uvIndex = i * 2;
             invokeGlTexCoord2f(uvs[uvIndex], uvs[uvIndex + 1]);
             float[] v = vertices[i];
             invokeGlVertex3f(v[0], v[1], v[2]);
         }
+
         invokeEnd();
     }
 
-    public static String texturedFragmentShader() {
-        return "#version 330 core\n" +
-                "in vec2 v_TexCoord;\n" +
-                "uniform sampler2D u_Texture;\n" +
-                "out vec4 fragColor;\n" +
-                "void main(){\n" +
-                "    fragColor = texture(u_Texture, v_TexCoord);\n" +
-                "}\n";
+    /**
+     * [u0,v0, u1,v0, u1,v1, u0,v1] for full tile face.
+     */
+    public float[] unitFaceUVs() {
+        return new float[]{0f, 0f, 1f, 0f, 1f, 1f, 0f, 1f};
     }
 
-    private AtlasBuild buildAtlasFromTiles(Path tilesDir) throws IOException {
-        List<Path> tilePaths = new ArrayList<>();
-        try (var stream = Files.list(tilesDir)) {
-            stream
-                    .filter(p -> p.getFileName().toString().toLowerCase().endsWith(".png"))
-                    .sorted(Comparator.comparing(p -> p.getFileName().toString()))
-                    .forEach(tilePaths::add);
-        }
-
-        if (tilePaths.size() > MAX_TILES) {
-            throw new IOException("Too many tiles for 16x16 atlas grid: " + tilePaths.size());
-        }
-
-        BufferedImage atlas = new BufferedImage(
-                TexturedVoxelAtlas.ATLAS_SIZE,
-                TexturedVoxelAtlas.ATLAS_SIZE,
-                BufferedImage.TYPE_INT_ARGB
-        );
-        Graphics2D g2d = atlas.createGraphics();
-
-        Map<String, Integer> indices = new HashMap<>();
-        int tileCounter = 0;
-        for (Path tilePath : tilePaths) {
-            BufferedImage tile = ImageIO.read(tilePath.toFile());
-            if (tile == null) {
-                continue;
-            }
-
-            int tx = (tileCounter % TILES_PER_ROW) * TexturedVoxelAtlas.TILE_SIZE;
-            int ty = (tileCounter / TILES_PER_ROW) * TexturedVoxelAtlas.TILE_SIZE;
-            g2d.drawImage(tile, tx, ty, TexturedVoxelAtlas.TILE_SIZE, TexturedVoxelAtlas.TILE_SIZE, null);
-            indices.put(tilePath.getFileName().toString(), tileCounter);
-            tileCounter++;
-        }
-
-        g2d.dispose();
-        return new AtlasBuild(atlas, indices);
-    }
-
-    private int uploadAtlasAndBind(BufferedImage atlasImage) {
+    private int uploadTexture(BufferedImage image) {
         try {
             Class<?> gl11 = Class.forName("org.lwjgl.opengl.GL11");
 
@@ -154,67 +115,27 @@ public final class OpenGLVoxelRenderer {
                     int.class, int.class, int.class, ByteBuffer.class
             );
 
-            int generatedId = (int) glGenTextures.invoke(null);
-            glBindTexture.invoke(null, texture2D, generatedId);
+            int textureId = (int) glGenTextures.invoke(null);
+            glBindTexture.invoke(null, texture2D, textureId);
 
-            ByteBuffer pixels = imageToRgba(atlasImage);
+            ByteBuffer pixels = imageToRgba(image);
             glTexImage2D.invoke(
                     null,
                     texture2D,
                     0,
                     rgba,
-                    atlasImage.getWidth(),
-                    atlasImage.getHeight(),
+                    image.getWidth(),
+                    image.getHeight(),
                     0,
                     rgba,
                     unsignedByte,
                     pixels
             );
 
-            try {
-                Class<?> gl30 = Class.forName("org.lwjgl.opengl.GL30");
-                Method glGenerateMipmap = gl30.getMethod("glGenerateMipmap", int.class);
-                glGenerateMipmap.invoke(null, texture2D);
-            } catch (Exception ignored) {
-                // Optional in this engine; filtering fallback still works.
-            }
-
-            return generatedId;
-        } catch (Exception e) {
+            OpenGLTextureAtlasUtil.applyNearestNeighborFiltering(textureId);
+            return textureId;
+        } catch (Exception ignored) {
             return 0;
-        }
-    }
-
-    private void enableTexturing() {
-        try {
-            Class<?> gl11 = Class.forName("org.lwjgl.opengl.GL11");
-            int texture2D = gl11.getField("GL_TEXTURE_2D").getInt(null);
-            gl11.getMethod("glEnable", int.class).invoke(null, texture2D);
-        } catch (Exception ignored) {
-            // Safe in JavaFX/non-LWJGL contexts.
-        }
-    }
-
-
-    /**
-     * Configures VAO attributes for packed vertex format:
-     * position(3 floats) + uv(2 floats).
-     */
-    public void configureVaoForPositionAndUv(int positionAttribIndex, int uvAttribIndex, int strideBytes) {
-        try {
-            Class<?> gl20 = Class.forName("org.lwjgl.opengl.GL20");
-            int glFloat = Class.forName("org.lwjgl.opengl.GL11").getField("GL_FLOAT").getInt(null);
-
-            Method enable = gl20.getMethod("glEnableVertexAttribArray", int.class);
-            Method pointer = gl20.getMethod("glVertexAttribPointer", int.class, int.class, int.class, boolean.class, int.class, long.class);
-
-            enable.invoke(null, positionAttribIndex);
-            pointer.invoke(null, positionAttribIndex, 3, glFloat, false, strideBytes, 0L);
-
-            enable.invoke(null, uvAttribIndex);
-            pointer.invoke(null, uvAttribIndex, 2, glFloat, false, strideBytes, 3L * Float.BYTES);
-        } catch (Exception ignored) {
-            // Safe in non-LWJGL contexts.
         }
     }
 
@@ -235,11 +156,31 @@ public final class OpenGLVoxelRenderer {
         return buffer;
     }
 
-    private void invokeBeginTriangles() {
+    private void invokeEnableTexture2d() {
         try {
             Class<?> gl11 = Class.forName("org.lwjgl.opengl.GL11");
-            int triangles = gl11.getField("GL_TRIANGLES").getInt(null);
-            gl11.getMethod("glBegin", int.class).invoke(null, triangles);
+            int texture2D = gl11.getField("GL_TEXTURE_2D").getInt(null);
+            gl11.getMethod("glEnable", int.class).invoke(null, texture2D);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private boolean invokeBindTexture2d(int textureId) {
+        try {
+            Class<?> gl11 = Class.forName("org.lwjgl.opengl.GL11");
+            int texture2D = gl11.getField("GL_TEXTURE_2D").getInt(null);
+            gl11.getMethod("glBindTexture", int.class, int.class).invoke(null, texture2D, textureId);
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private void invokeBeginQuads() {
+        try {
+            Class<?> gl11 = Class.forName("org.lwjgl.opengl.GL11");
+            int quads = gl11.getField("GL_QUADS").getInt(null);
+            gl11.getMethod("glBegin", int.class).invoke(null, quads);
         } catch (Exception ignored) {
         }
     }
@@ -274,8 +215,5 @@ public final class OpenGLVoxelRenderer {
             gl11.getMethod("glVertex3f", float.class, float.class, float.class).invoke(null, x, y, z);
         } catch (Exception ignored) {
         }
-    }
-
-    private record AtlasBuild(BufferedImage image, Map<String, Integer> tileIndexByName) {
     }
 }

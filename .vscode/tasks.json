@@ -1,0 +1,18 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build-javafx",
+      "type": "shell",
+      "command": "javac --class-path game/lib/json.jar --module-path ${env:PATH_TO_FX}/lib --add-modules javafx.controls,javafx.graphics,javafx.fxml -d game/out $(find game/src -name '*.java')",
+      "problemMatcher": ["$javac"],
+      "group": "build"
+    },
+    {
+      "label": "run-fxgame",
+      "type": "shell",
+      "command": "java --class-path game/out:game/lib/json.jar --module-path ${env:PATH_TO_FX}/lib --add-modules javafx.controls,javafx.graphics,javafx.fxml FXGame",
+      "dependsOn": "build-javafx"
+    }
+  ]
+}

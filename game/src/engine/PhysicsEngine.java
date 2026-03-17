@@ -24,6 +24,10 @@ public class PhysicsEngine {
     public static final double JUMP_BUFFER_TIME = 0.15;
     public static final double COYOTE_TIME = 0.10;
 
+    // 1.0 x 1.0 x 1.0 unit AABB for collision checks.
+    private static final double COLLIDER_HALF = 0.5;
+    private static final double COLLIDER_HEIGHT = 1.0;
+
     public static void updateHorizontal(Player p, ChunkWorld world, double dt, double moveX, double moveZ, boolean sprint) {
         double desiredSpeed = sprint ? SPRINT_SPEED : WALK_SPEED;
         double len = Math.sqrt(moveX * moveX + moveZ * moveZ);
@@ -109,11 +113,11 @@ public class PhysicsEngine {
 
     private static boolean isStandingOnGround(Player p, ChunkWorld world, double epsilon) {
         double feetY = p.y - epsilon;
-        int minX = (int) Math.floor(p.x - Player.RADIUS);
-        int maxX = (int) Math.floor(p.x + Player.RADIUS);
+        int minX = (int) Math.floor(p.x - COLLIDER_HALF);
+        int maxX = (int) Math.floor(p.x + COLLIDER_HALF);
         int y = (int) Math.floor(feetY);
-        int minZ = (int) Math.floor(p.z - Player.RADIUS);
-        int maxZ = (int) Math.floor(p.z + Player.RADIUS);
+        int minZ = (int) Math.floor(p.z - COLLIDER_HALF);
+        int maxZ = (int) Math.floor(p.z + COLLIDER_HALF);
 
         for (int x = minX; x <= maxX; x++) {
             for (int z = minZ; z <= maxZ; z++) {
@@ -132,12 +136,12 @@ public class PhysicsEngine {
     }
 
     private static boolean collides(Player p, ChunkWorld world) {
-        int minX = (int) Math.floor(p.x - Player.RADIUS);
-        int maxX = (int) Math.floor(p.x + Player.RADIUS);
+        int minX = (int) Math.floor(p.x - COLLIDER_HALF);
+        int maxX = (int) Math.floor(p.x + COLLIDER_HALF);
         int minY = (int) Math.floor(p.y);
-        int maxY = (int) Math.floor(p.y + Player.HEIGHT);
-        int minZ = (int) Math.floor(p.z - Player.RADIUS);
-        int maxZ = (int) Math.floor(p.z + Player.RADIUS);
+        int maxY = (int) Math.floor(p.y + COLLIDER_HEIGHT);
+        int minZ = (int) Math.floor(p.z - COLLIDER_HALF);
+        int maxZ = (int) Math.floor(p.z + COLLIDER_HALF);
 
         for (int x = minX; x <= maxX; x++) {
             for (int y = minY; y <= maxY; y++) {

@@ -61,8 +61,10 @@ public class FirstPersonRenderer {
             drawColumn(g, textures, block, world, px, py, pz, hit, dx, dy, dz, x, y0, columnHeight);
 
             double faceShade = BlockVisuals.shadeForFace(hit.faceX, hit.faceY, hit.faceZ);
-            if (faceShade < 1.0) {
-                g.setFill(Color.color(0, 0, 0, 1.0 - faceShade));
+            double aoShade = ambientOcclusion(world, hit);
+            double combinedShade = faceShade * aoShade;
+            if (combinedShade < 1.0) {
+                g.setFill(Color.color(0, 0, 0, 1.0 - combinedShade));
                 g.fillRect(x, y0, 1, columnHeight);
             }
 
@@ -129,6 +131,23 @@ public class FirstPersonRenderer {
         int outsideY = hit.y - hit.faceY;
         int outsideZ = hit.z - hit.faceZ;
         return !world.isSolid(outsideX, outsideY, outsideZ);
+    }
+
+
+    private double ambientOcclusion(ChunkWorld world, RaycastHit hit) {
+        int outsideX = hit.x - hit.faceX;
+        int outsideY = hit.y - hit.faceY;
+        int outsideZ = hit.z - hit.faceZ;
+
+        int occluders = 0;
+        if (world.isSolid(outsideX + 1, outsideY, outsideZ)) occluders++;
+        if (world.isSolid(outsideX - 1, outsideY, outsideZ)) occluders++;
+        if (world.isSolid(outsideX, outsideY + 1, outsideZ)) occluders++;
+        if (world.isSolid(outsideX, outsideY - 1, outsideZ)) occluders++;
+        if (world.isSolid(outsideX, outsideY, outsideZ + 1)) occluders++;
+        if (world.isSolid(outsideX, outsideY, outsideZ - 1)) occluders++;
+
+        return 1.0 - Math.min(0.22, occluders * 0.035);
     }
 
     private void renderSkyGradient(GraphicsContext g) {

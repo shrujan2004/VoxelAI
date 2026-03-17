@@ -121,11 +121,11 @@ public class HudRenderer {
 
     private void drawHotbarIcon(GraphicsContext g, TexturePack textures, BlockType type, double x, double y) {
         if (textures.atlas() != null) {
-            int idx = textures.atlasIndex(type);
-            int sx = (idx % TexturePack.ATLAS_COLS) * TexturePack.TILE_SIZE;
-            int sy = (idx / TexturePack.ATLAS_COLS) * TexturePack.TILE_SIZE;
-            g.drawImage(textures.atlas(), sx, sy, TexturePack.TILE_SIZE, TexturePack.TILE_SIZE, x, y, 24, 24);
-            return;
+            TexturePack.AtlasUV uv = textures.atlasUvForFace(type, 0);
+            if (uv != null) {
+                g.drawImage(textures.atlas(), uv.sx(), uv.sy(), TexturePack.TILE_SIZE, TexturePack.TILE_SIZE, x, y, 24, 24);
+                return;
+            }
         }
 
         Image tile = textures.tile(type);

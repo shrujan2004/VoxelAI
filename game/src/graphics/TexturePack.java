@@ -42,25 +42,13 @@ public class TexturePack {
 
         for (BlockType type : BlockType.values()) {
             if (type.topTexture != null) {
-                topTiles.put(type, loadImage(
-                        "game/tiles/" + type.topTexture,
-                        "../tiles/" + type.topTexture,
-                        "tiles/" + type.topTexture
-                ));
+                topTiles.put(type, loadBlockFace(type, type.topTexture, "grass_block_top.png", "log_top.png"));
             }
             if (type.sideTexture != null) {
-                sideTiles.put(type, loadImage(
-                        "game/tiles/" + type.sideTexture,
-                        "../tiles/" + type.sideTexture,
-                        "tiles/" + type.sideTexture
-                ));
+                sideTiles.put(type, loadBlockFace(type, type.sideTexture, "grass_block_side.png", "oak_log.png"));
             }
             if (type.bottomTexture != null) {
-                bottomTiles.put(type, loadImage(
-                        "game/tiles/" + type.bottomTexture,
-                        "../tiles/" + type.bottomTexture,
-                        "tiles/" + type.bottomTexture
-                ));
+                bottomTiles.put(type, loadBlockFace(type, type.bottomTexture, "dirt.png", "log_top.png"));
             }
 
             validateTextureStandard(type, topTiles.get(type));
@@ -118,6 +106,32 @@ public class TexturePack {
             case GLASS -> 5;
             case WATER -> 6;
             default -> 1;
+        };
+    }
+
+    private Image loadBlockFace(BlockType type, String primary, String... aliases) {
+        Image image = loadImage(paths(primary));
+        if (image != null) {
+            return image;
+        }
+
+        for (String alias : aliases) {
+            image = loadImage(paths(alias));
+            if (image != null) {
+                return image;
+            }
+        }
+
+        System.err.println("[TexturePack] Missing texture for " + type + " face: " + primary);
+        return null;
+    }
+
+    private String[] paths(String textureName) {
+        return new String[]{
+                "game/tiles/" + textureName,
+                "../tiles/" + textureName,
+                "tiles/" + textureName,
+                textureName
         };
     }
 

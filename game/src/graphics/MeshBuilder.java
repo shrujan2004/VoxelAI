@@ -64,9 +64,9 @@ public class MeshBuilder {
 
     // getUVs(blockID, face): returns 4 uv pairs (8 floats): [u0,v0, u1,v0, u1,v1, u0,v1]
     public float[] getUVs(int blockID, int face) {
-        int normalizedFace = switch (Face.values()[Math.max(0, Math.min(Face.values().length - 1, face))]) {
-            case TOP -> TexturedVoxelAtlas.FACE_TOP;
-            case BOTTOM -> TexturedVoxelAtlas.FACE_BOTTOM;
+        int normalizedFace = switch (face) {
+            case TexturedVoxelAtlas.FACE_TOP -> TexturedVoxelAtlas.FACE_TOP;
+            case TexturedVoxelAtlas.FACE_BOTTOM -> TexturedVoxelAtlas.FACE_BOTTOM;
             default -> TexturedVoxelAtlas.FACE_SIDE;
         };
         return TexturedVoxelAtlas.getUVs(blockID, normalizedFace);

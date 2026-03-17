@@ -108,12 +108,17 @@ public final class OpenGLVoxelRenderer {
         try {
             Class<?> gl11 = Class.forName("org.lwjgl.opengl.GL11");
             int glFloat = gl11.getField("GL_FLOAT").getInt(null);
+            int glVertexArray = gl11.getField("GL_VERTEX_ARRAY").getInt(null);
+            int glTexCoordArray = gl11.getField("GL_TEXTURE_COORD_ARRAY").getInt(null);
 
+            Method enableClientState = gl11.getMethod("glEnableClientState", int.class);
             Method vertexPointer = gl11.getMethod("glVertexPointer", int.class, int.class, int.class, long.class);
             Method texCoordPointer = gl11.getMethod("glTexCoordPointer", int.class, int.class, int.class, long.class);
             Method normalPointer = gl11.getMethod("glNormalPointer", int.class, int.class, long.class);
 
             int stride = MeshBuilder.STRIDE_BYTES;
+            enableClientState.invoke(null, glVertexArray);
+            enableClientState.invoke(null, glTexCoordArray);
             vertexPointer.invoke(null, MeshBuilder.POSITION_FLOATS, glFloat, stride, 0L);
             texCoordPointer.invoke(null, MeshBuilder.UV_FLOATS, glFloat, stride, (long) MeshBuilder.POSITION_FLOATS * Float.BYTES);
             normalPointer.invoke(null, glFloat, stride, (long) (MeshBuilder.POSITION_FLOATS + MeshBuilder.UV_FLOATS) * Float.BYTES);

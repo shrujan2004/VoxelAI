@@ -45,6 +45,24 @@ public class ChunkWorldIO {
     public static void load(ChunkWorld world) {
         File save = resolveSaveFile();
         Map<Long, BlockType> loaded = new HashMap<>();
+
+        if (!save.exists()) {
+            try {
+                File parent = save.getParentFile();
+                if (parent != null && !parent.exists()) {
+                    parent.mkdirs();
+                }
+                save.createNewFile();
+                world.restoreEdits(loaded);
+                System.out.println("🆕 No save found. Generated new world state: " + save.getPath());
+                return;
+            } catch (Exception ex) {
+                System.out.println("⚠ Could not create save file, continuing with generated world: " + ex.getMessage());
+                world.restoreEdits(loaded);
+                return;
+            }
+        }
+
         try (BufferedReader in = new BufferedReader(new FileReader(save))) {
             String line;
             while ((line = in.readLine()) != null) {

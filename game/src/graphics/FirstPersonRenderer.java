@@ -106,8 +106,9 @@ public class FirstPersonRenderer {
     ) {
         Image tileImage = textures.tileForFace(block, hit.faceY);
         if (tileImage != null) {
-            int tx = sampleTextureX(px, py, pz, dx, dy, dz, hit.distance, hit.faceX, hit.faceY, hit.faceZ);
-            g.drawImage(tileImage, tx, 0, 1, TexturePack.TILE_SIZE, screenX, screenY, 1, screenHeight);
+            int sampleSize = textures.effectiveTileSize(tileImage);
+            int tx = sampleTextureX(px, py, pz, dx, dy, dz, hit.distance, hit.faceX, hit.faceY, hit.faceZ, sampleSize);
+            g.drawImage(tileImage, tx, 0, 1, sampleSize, screenX, screenY, 1, screenHeight);
             return;
         }
 
@@ -115,7 +116,7 @@ public class FirstPersonRenderer {
         if (atlas != null) {
             TexturePack.AtlasUV uv = textures.atlasUvForFace(block, hit.faceY);
             if (uv != null) {
-                int tx = sampleTextureX(px, py, pz, dx, dy, dz, hit.distance, hit.faceX, hit.faceY, hit.faceZ);
+                int tx = sampleTextureX(px, py, pz, dx, dy, dz, hit.distance, hit.faceX, hit.faceY, hit.faceZ, TexturePack.TILE_SIZE);
                 g.drawImage(atlas, uv.sx() + tx, uv.sy(), 1, TexturePack.TILE_SIZE, screenX, screenY, 1, screenHeight);
                 return;
             }
@@ -173,7 +174,7 @@ public class FirstPersonRenderer {
     }
 
     private int sampleTextureX(double px, double py, double pz, double dx, double dy, double dz, double dist,
-                               int faceX, int faceY, int faceZ) {
+                               int faceX, int faceY, int faceZ, int sampleSize) {
         double hx = px + dx * dist;
         double hy = py + dy * dist;
         double hz = pz + dz * dist;
@@ -186,6 +187,6 @@ public class FirstPersonRenderer {
         } else {
             frac = hy - Math.floor(hy);
         }
-        return Math.max(0, Math.min(TexturePack.TILE_SIZE - 1, (int) Math.floor(frac * TexturePack.TILE_SIZE)));
+        return Math.max(0, Math.min(sampleSize - 1, (int) Math.floor(frac * sampleSize)));
     }
 }

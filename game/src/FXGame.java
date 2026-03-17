@@ -21,6 +21,7 @@ public class FXGame extends Application {
     public void start(Stage stage) {
         Canvas canvas = new Canvas(FXGameState.WIDTH, FXGameState.HEIGHT);
         GraphicsContext g = canvas.getGraphicsContext2D();
+        g.setImageSmoothing(false);
         Scene scene = new Scene(new javafx.scene.layout.StackPane(canvas));
 
         FirstPersonRenderer firstPersonRenderer = new FirstPersonRenderer(FXGameState.WIDTH, FXGameState.HEIGHT);

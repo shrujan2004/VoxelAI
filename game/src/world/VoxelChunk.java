@@ -55,6 +55,11 @@ public class VoxelChunk {
         return block(x, y, z) == BlockType.AIR;
     }
 
+    public boolean isTransparent(int x, int y, int z) {
+        BlockType block = block(x, y, z);
+        return block == BlockType.AIR || block == BlockType.WATER || block == BlockType.GLASS;
+    }
+
     private boolean inBounds(int x, int y, int z) {
         return x >= 0 && x < SIZE && y >= 0 && y < SIZE && z >= 0 && z < SIZE;
     }

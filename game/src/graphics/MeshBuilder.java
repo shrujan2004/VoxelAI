@@ -12,6 +12,7 @@ public class MeshBuilder {
     private static final float ATLAS_SIZE = 256.0f;
     private static final int TILE_SIZE = 16;
     private static final int ATLAS_COLS = 16;
+    private static final float UV_EPSILON = 0.001f;
 
     public ChunkMesh build(VoxelChunk chunk) {
         // Worst case: 16^3 blocks * 6 faces * 6 vertices
@@ -34,25 +35,13 @@ public class MeshBuilder {
                     int wy = baseY + y;
                     int wz = baseZ + z;
 
-                    // Backface/hidden-face culling: generate only faces adjacent to air.
-                    if (chunk.isAir(x, y + 1, z)) {
-                        putFace(buffer, block, wx, wy, wz, Face.TOP);
-                    }
-                    if (chunk.isAir(x, y - 1, z)) {
-                        putFace(buffer, block, wx, wy, wz, Face.BOTTOM);
-                    }
-                    if (chunk.isAir(x + 1, y, z)) {
-                        putFace(buffer, block, wx, wy, wz, Face.EAST);
-                    }
-                    if (chunk.isAir(x - 1, y, z)) {
-                        putFace(buffer, block, wx, wy, wz, Face.WEST);
-                    }
-                    if (chunk.isAir(x, y, z + 1)) {
-                        putFace(buffer, block, wx, wy, wz, Face.SOUTH);
-                    }
-                    if (chunk.isAir(x, y, z - 1)) {
-                        putFace(buffer, block, wx, wy, wz, Face.NORTH);
-                    }
+                    // Face culling: only build faces adjacent to air/transparent cells.
+                    if (chunk.isTransparent(x, y + 1, z)) putFace(buffer, block, wx, wy, wz, Face.TOP);
+                    if (chunk.isTransparent(x, y - 1, z)) putFace(buffer, block, wx, wy, wz, Face.BOTTOM);
+                    if (chunk.isTransparent(x + 1, y, z)) putFace(buffer, block, wx, wy, wz, Face.EAST);
+                    if (chunk.isTransparent(x - 1, y, z)) putFace(buffer, block, wx, wy, wz, Face.WEST);
+                    if (chunk.isTransparent(x, y, z + 1)) putFace(buffer, block, wx, wy, wz, Face.SOUTH);
+                    if (chunk.isTransparent(x, y, z - 1)) putFace(buffer, block, wx, wy, wz, Face.NORTH);
                 }
             }
         }
@@ -62,7 +51,7 @@ public class MeshBuilder {
     }
 
     private void putFace(FloatBuffer buffer, BlockType block, int x, int y, int z, Face face) {
-        UvRect uv = uvForFace(block, face);
+        UvRect uv = mapBlockIdToAtlasUV(block.atlasId, face);
 
         for (int i = 0; i < 6; i++) {
             float[] p = face.positions[i];
@@ -73,21 +62,22 @@ public class MeshBuilder {
         }
     }
 
-    private UvRect uvForFace(BlockType type, Face face) {
+    // Maps a 1x1x1 block face to a precise 16x16 region in a [0,1] atlas UV space.
+    public UvRect mapBlockIdToAtlasUV(int blockId, Face face) {
         int faceOffset = switch (face) {
             case TOP -> 0;
             case BOTTOM -> 2;
             default -> 1;
         };
 
-        int tileIndex = type.atlasId * 3 + faceOffset;
+        int tileIndex = blockId * 3 + faceOffset;
         float tileX = (tileIndex % ATLAS_COLS) * TILE_SIZE;
         float tileY = (tileIndex / ATLAS_COLS) * TILE_SIZE;
 
-        float u0 = tileX / ATLAS_SIZE;
-        float v0 = tileY / ATLAS_SIZE;
-        float u1 = (tileX + TILE_SIZE) / ATLAS_SIZE;
-        float v1 = (tileY + TILE_SIZE) / ATLAS_SIZE;
+        float u0 = (tileX + UV_EPSILON) / ATLAS_SIZE;
+        float v0 = (tileY + UV_EPSILON) / ATLAS_SIZE;
+        float u1 = (tileX + TILE_SIZE - UV_EPSILON) / ATLAS_SIZE;
+        float v1 = (tileY + TILE_SIZE - UV_EPSILON) / ATLAS_SIZE;
         return new UvRect(u0, v0, u1, v1);
     }
 
@@ -95,10 +85,10 @@ public class MeshBuilder {
         return a + (b - a) * t;
     }
 
-    private record UvRect(float u0, float v0, float u1, float v1) {
+    public record UvRect(float u0, float v0, float u1, float v1) {
     }
 
-    private enum Face {
+    public enum Face {
         TOP(0, 1, 0,
                 new float[][]{
                         {0, 1, 0}, {1, 1, 0}, {1, 1, 1},

@@ -67,27 +67,20 @@ public class MeshBuilder {
 
     // getUVs(blockID, face): returns 4 uv pairs (8 floats): [u0,v0, u1,v0, u1,v1, u0,v1]
     public float[] getUVs(int blockID, int face) {
-        int normalizedFace = switch (face) {
-            case TexturedVoxelAtlas.FACE_TOP -> TexturedVoxelAtlas.FACE_TOP;
-            case TexturedVoxelAtlas.FACE_BOTTOM -> TexturedVoxelAtlas.FACE_BOTTOM;
-            default -> TexturedVoxelAtlas.FACE_SIDE;
+        return new float[]{
+                0.0f + UV_EPSILON, 0.0f + UV_EPSILON,
+                1.0f - UV_EPSILON, 0.0f + UV_EPSILON,
+                1.0f - UV_EPSILON, 1.0f - UV_EPSILON,
+                0.0f + UV_EPSILON, 1.0f - UV_EPSILON
         };
-        return TexturedVoxelAtlas.getUVs(blockID, normalizedFace);
     }
 
-    // Maps a 1x1x1 block face to a precise 16x16 region in a [0,1] atlas UV space.
+    // Maps each voxel face to a full [0,1] tile UV range.
     public UvRect mapBlockIdToAtlasUV(int blockId, Face face) {
-        int faceOffset = switch (face) {
-            case TOP -> 0;
-            case BOTTOM -> 2;
-            default -> 1;
-        };
-
-        float[] raw = TexturedVoxelAtlas.getUVs(blockId, faceOffset);
-        float u0 = raw[0] + UV_EPSILON;
-        float v0 = raw[1] + UV_EPSILON;
-        float u1 = raw[2] - UV_EPSILON;
-        float v1 = raw[5] - UV_EPSILON;
+        float u0 = 0.0f + UV_EPSILON;
+        float v0 = 0.0f + UV_EPSILON;
+        float u1 = 1.0f - UV_EPSILON;
+        float v1 = 1.0f - UV_EPSILON;
         return new UvRect(u0, v0, u1, v1);
     }
 

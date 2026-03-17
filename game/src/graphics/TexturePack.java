@@ -144,7 +144,7 @@ public class TexturePack {
         int h = (int) Math.round(texture.getHeight());
         if (w != TILE_SIZE || h != TILE_SIZE) {
             System.err.println("[TexturePack] Non-standard texture size for " + type +
-                    ": " + w + "x" + h + ". Expected 16x16 to avoid mixels.");
+                    ": " + w + "x" + h + ". Using adaptive sampling for this texture.");
         }
     }
 
@@ -163,6 +163,17 @@ public class TexturePack {
             }
         }
         return null;
+    }
+
+    public int effectiveTileSize(Image texture) {
+        if (texture == null) {
+            return TILE_SIZE;
+        }
+
+        int w = (int) Math.round(texture.getWidth());
+        int h = (int) Math.round(texture.getHeight());
+        int candidate = Math.min(w, h);
+        return candidate > 0 ? candidate : TILE_SIZE;
     }
 
     public record AtlasUV(int sx, int sy, int sw, int sh) {

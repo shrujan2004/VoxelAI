@@ -10,9 +10,6 @@ public class MeshBuilder {
     // vertex layout: position(3), uv(2), normal(3), aoBrightness(1)
     // This maps directly to OpenGL attribute streams used by glVertex + glTexCoord style pipelines.
     private static final int FLOATS_PER_VERTEX = 9;
-    private static final float ATLAS_SIZE = 256.0f;
-    private static final int TILE_SIZE = 16;
-    private static final int ATLAS_COLS = 16;
     private static final float UV_EPSILON = 0.001f;
 
     public ChunkMesh build(VoxelChunk chunk) {
@@ -67,9 +64,12 @@ public class MeshBuilder {
 
     // getUVs(blockID, face): returns 4 uv pairs (8 floats): [u0,v0, u1,v0, u1,v1, u0,v1]
     public float[] getUVs(int blockID, int face) {
-        Face f = Face.values()[Math.max(0, Math.min(Face.values().length - 1, face))];
-        UvRect uv = mapBlockIdToAtlasUV(blockID, f);
-        return new float[]{uv.u0, uv.v0, uv.u1, uv.v0, uv.u1, uv.v1, uv.u0, uv.v1};
+        int normalizedFace = switch (Face.values()[Math.max(0, Math.min(Face.values().length - 1, face))]) {
+            case TOP -> TexturedVoxelAtlas.FACE_TOP;
+            case BOTTOM -> TexturedVoxelAtlas.FACE_BOTTOM;
+            default -> TexturedVoxelAtlas.FACE_SIDE;
+        };
+        return TexturedVoxelAtlas.getUVs(blockID, normalizedFace);
     }
 
     // Maps a 1x1x1 block face to a precise 16x16 region in a [0,1] atlas UV space.
@@ -80,14 +80,11 @@ public class MeshBuilder {
             default -> 1;
         };
 
-        int tileIndex = blockId * 3 + faceOffset;
-        float tileX = (tileIndex % ATLAS_COLS) * TILE_SIZE;
-        float tileY = (tileIndex / ATLAS_COLS) * TILE_SIZE;
-
-        float u0 = (tileX + UV_EPSILON) / ATLAS_SIZE;
-        float v0 = (tileY + UV_EPSILON) / ATLAS_SIZE;
-        float u1 = (tileX + TILE_SIZE - UV_EPSILON) / ATLAS_SIZE;
-        float v1 = (tileY + TILE_SIZE - UV_EPSILON) / ATLAS_SIZE;
+        float[] raw = TexturedVoxelAtlas.getUVs(blockId, faceOffset);
+        float u0 = raw[0] + UV_EPSILON;
+        float v0 = raw[1] + UV_EPSILON;
+        float u1 = raw[2] - UV_EPSILON;
+        float v1 = raw[5] - UV_EPSILON;
         return new UvRect(u0, v0, u1, v1);
     }
 

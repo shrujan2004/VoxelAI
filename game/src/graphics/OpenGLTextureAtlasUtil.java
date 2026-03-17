@@ -36,4 +36,11 @@ public final class OpenGLTextureAtlasUtil {
             // Safe no-op when LWJGL is not on classpath (e.g., JavaFX/headless validation container).
         }
     }
+
+    /**
+     * Alias kept for renderer initialization code that calls initTextureState(textureId).
+     */
+    public static void initTextureState(int textureId) {
+        applyNearestNeighborFiltering(textureId);
+    }
 }
